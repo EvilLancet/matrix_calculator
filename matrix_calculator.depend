@@ -1,0 +1,35 @@
+# depslib dependency file v1.0
+1759502383 source:f:\marinelogbook\matrix_calculator\error.cpp
+
+1759502404 source:f:\marinelogbook\matrix_calculator\rpn.cpp
+
+1759684802 source:f:\marinelogbook\matrix_calculator\token.cpp
+	<map>
+	<stdexcept>
+	<stdio.h>
+	"Token.h"
+	"Error.h"
+
+1759502468 source:f:\marinelogbook\matrix_calculator\tokenizer.cpp
+
+1760258900 source:f:\marinelogbook\matrix_calculator\main.cpp
+	<stdio.h>
+	<stdlib.h>
+	<ctype.h>
+	<string.h>
+
+1759502301 f:\marinelogbook\matrix_calculator\tokenizer.h
+	<vector>
+	"Token.h"
+
+1759502490 f:\marinelogbook\matrix_calculator\token.h
+	<string>
+
+1759502307 f:\marinelogbook\matrix_calculator\rpn.h
+	<vector>
+	"Token.h"
+	"Error.h"
+
+1759504063 f:\marinelogbook\matrix_calculator\error.h
+	<string>
+
