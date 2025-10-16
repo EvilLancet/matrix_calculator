@@ -335,6 +335,77 @@ Token* shuntingYard(Token *head) {
     return output_front;
 }
 
+double countRPN(Token *head) {
+    double stack[100]; // Стек для чисел
+    int top = -1;      // Вершина стека
+
+    Token *current = head;
+    while (current != NULL) {
+        switch (current->type) {
+            case TOK_NUMBER: {
+                // Преобразуем строку в число и помещаем в стек
+                double num = atof(current->value);
+                stack[++top] = num;
+                break;
+            }
+
+            case TOK_PLUS:
+                if (top < 1) {
+                    printf("Ошибка: недостаточно операндов для +\n");
+                    return 0;
+                }
+                stack[top - 1] = stack[top - 1] + stack[top];
+                top--;
+                break;
+
+            case TOK_MINUS:
+                if (top < 1) {
+                    printf("Ошибка: недостаточно операндов для -\n");
+                    return 0;
+                }
+                stack[top - 1] = stack[top - 1] - stack[top];
+                top--;
+                break;
+
+            case TOK_MULTIPLY:
+                if (top < 1) {
+                    printf("Ошибка: недостаточно операндов для *\n");
+                    return 0;
+                }
+                stack[top - 1] = stack[top - 1] * stack[top];
+                top--;
+                break;
+
+            case TOK_DIVIDE:
+                if (top < 1) {
+                    printf("Ошибка: недостаточно операндов для /\n");
+                    return 0;
+                }
+                if (stack[top] == 0) {
+                    printf("Ошибка: деление на ноль\n");
+                    return 0;
+                }
+                stack[top - 1] = stack[top - 1] / stack[top];
+                top--;
+                break;
+
+            default:
+                // Игнорируем другие токены
+                break;
+        }
+        current = current->next;
+    }
+
+    if (top != 0) {
+        printf("Ошибка: в стеке осталось %d элементов\n", top + 1);
+        return 0;
+    }
+
+    return stack[0];
+}
+
+
+
 // Функция для печати списка токенов
 void print_tokens(Token *head) {
     const char *type_names[] = {
@@ -383,7 +454,7 @@ int main() {
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
 
-    const char *input = "x = 42 + (y * 3.14)";
+    const char *input = "b = a = (42 - 10) * 3 + 10 * 10";
     printf("Входное выражение: %s\n", input);
 
     Token *tokens = lex(input);
@@ -392,6 +463,8 @@ int main() {
     Token* rpn = shuntingYard(tokens);
     if (rpn != NULL) {
         print_rpn(rpn);
+        double a = countRPN(rpn);
+        printf("%f - result", a);
         free_tokens(rpn);
     }
 
