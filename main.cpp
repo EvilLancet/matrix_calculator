@@ -1,193 +1,109 @@
+#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
+#include <ctype.h>
 
-// РўРёРїС‹ С‚РѕРєРµРЅРѕРІ
+// Типы токенов
 typedef enum {
-    TOK_EOF,        // РљРѕРЅРµС† РІС…РѕРґРЅРѕРіРѕ РїРѕС‚РѕРєР°
-    TOK_NUMBER,     // Р§РёСЃР»Рѕ
-    TOK_IDENT,      // РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ (РїРµСЂРµРјРµРЅРЅР°СЏ)
-    TOK_PLUS,       // РћРїРµСЂР°С‚РѕСЂ +
-    TOK_MINUS,      // РћРїРµСЂР°С‚РѕСЂ -
-    TOK_MULTIPLY,   // РћРїРµСЂР°С‚РѕСЂ *
-    TOK_DIVIDE,     // РћРїРµСЂР°С‚РѕСЂ /
-    TOK_LPAREN,     // Р›РµРІР°СЏ РєСЂСѓРіР»Р°СЏ СЃРєРѕР±РєР°
-    TOK_RPAREN,     // РџСЂР°РІР°СЏ РєСЂСѓРіР»Р°СЏ СЃРєРѕР±РєР°
-    TOK_ASSIGN      // РћРїРµСЂР°С‚РѕСЂ РїСЂРёСЃРІР°РёРІР°РЅРёСЏ =
-} TokenType;
+    TOK_EOF,        // Конец входного потока
+    TOK_NUMBER,     // Число
+    TOK_IDENT,      // Идентификатор (переменная)
+    TOK_PLUS,       // Оператор +
+    TOK_MINUS,      // Оператор -
+    TOK_MULTIPLY,   // Оператор *
+    TOK_DIVIDE,     // Оператор /
+    TOK_LPAREN,     // Левая круглая скобка
+    TOK_RPAREN,     // Правая круглая скобка
+    TOK_LBRACKET,   // [
+    TOK_RBRACKET,   // ]
+    TOK_COMMA,      // ,
+    TOK_FUNCTION,   // функция
+    TOK_ASSIGN      // Оператор присваивания =
+} TokenT;
 
-// РЎС‚СЂСѓРєС‚СѓСЂР° С‚РѕРєРµРЅР° (СѓР·РµР» РґРІСѓСЃРІСЏР·РЅРѕРіРѕ СЃРїРёСЃРєР°)
+// Структура токена (узел двусвязного списка)
 typedef struct Token {
-    TokenType type;
+    TokenT type;
     char *value;
     struct Token *prev;
     struct Token *next;
 } Token;
 
-
-/*
-template <typename T>
-class Stack {
-private:
-    struct Node {
-        T data;
-        Node* next;
-        Node(const T& value) : data(value), next(nullptr) {}
-    };
-
-    Node* top_node;
-    size_t stack_size;
-
-public:
-    // РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ
-    Stack() : top_node(nullptr), stack_size(0) {}
-
-    // Р”РµСЃС‚СЂСѓРєС‚РѕСЂ
-    ~Stack() {
-        while (!empty()) {
-            pop();
-        }
-    }
-
-    // Р”РѕР±Р°РІР»РµРЅРёРµ СЌР»РµРјРµРЅС‚Р° РЅР° РІРµСЂС… СЃС‚РµРєР°
-    void push(const T& value) {
-        Node* new_node = new Node(value);
-        new_node->next = top_node;
-        top_node = new_node;
-        stack_size++;
-    }
-
-    // РЈРґР°Р»РµРЅРёРµ РІРµСЂС…РЅРµРіРѕ СЌР»РµРјРµРЅС‚Р°
-    void pop() {
-        if (!empty()) {
-
-        Node* temp = top_node;
-        top_node = top_node->next;
-        delete temp;
-        stack_size--;
-
-        }
-    }
-
-    // Р’РѕР·РІСЂР°С‚ РІРµСЂС…РЅРµРіРѕ СЌР»РµРјРµРЅС‚Р°
-    T& top() {
-        if (empty()) {
-
-        }
-        else
-        {
-            return top_node->data;
-        }
-    }
-
-    // РџСЂРѕРІРµСЂРєР° РЅР° РїСѓСЃС‚РѕС‚Сѓ
-    bool empty() const {
-        return top_node == nullptr;
-    }
-
-    // Р Р°Р·РјРµСЂ СЃС‚РµРєР°
-    size_t size() const {
-        return stack_size;
-    }
-};
-*/
-
-void push_to_stack(Token* stack_top, Token* item)
-{
+// Функции для работы со стеком
+void push_to_stack(Token** stack_top, Token* item) {
     if (stack_top == NULL || item == NULL) return;
 
-    // Р’СЃС‚Р°РІР»СЏРµРј СЌР»РµРјРµРЅС‚ РїРµСЂРµРґ С‚РµРєСѓС‰РµР№ РІРµСЂС€РёРЅРѕР№ СЃС‚РµРєР°
-    item->prev = stack_top->prev;
-    item->next = stack_top;
+    item->prev = NULL;
+    item->next = *stack_top;
 
-    if (stack_top->prev != NULL) {
-        stack_top->prev->next = item;
+    if (*stack_top != NULL) {
+        (*stack_top)->prev = item;
     }
-    stack_top->prev = item;
+
+    *stack_top = item;
 }
 
-int pop_from_stack(Token* stack_top, Token* item)
-{
-    if (stack_top == NULL || item == NULL || stack_top->prev == NULL) {
-        return -1; // РћС€РёР±РєР°: РїСѓСЃС‚РѕР№ СЃС‚РµРє РёР»Рё РЅРµРІРµСЂРЅС‹Рµ РїР°СЂР°РјРµС‚СЂС‹
+Token* pop_from_stack(Token** stack_top) {
+    if (stack_top == NULL || *stack_top == NULL) {
+        return NULL;
     }
 
-    // РР·РІР»РµРєР°РµРј СЌР»РµРјРµРЅС‚ РїРµСЂРµРґ РІРµСЂС€РёРЅРѕР№ СЃС‚РµРєР° (РїРѕСЃР»РµРґРЅРёР№ РґРѕР±Р°РІР»РµРЅРЅС‹Р№)
-    Token* popped = stack_top->prev;
+    Token* popped = *stack_top;
+    *stack_top = (*stack_top)->next;
 
-    // РљРѕРїРёСЂСѓРµРј РґР°РЅРЅС‹Рµ РёР·РІР»РµС‡РµРЅРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р°
-    item->type = popped->type;
-    item->value = popped->value;
-
-    // РЈРґР°Р»СЏРµРј РёР·РІР»РµС‡РµРЅРЅС‹Р№ СЌР»РµРјРµРЅС‚ РёР· СЃРїРёСЃРєР°
-    stack_top->prev = popped->prev;
-    if (popped->prev != NULL) {
-        popped->prev->next = stack_top;
+    if (*stack_top != NULL) {
+        (*stack_top)->prev = NULL;
     }
 
-    // РћС‡РёС‰Р°РµРј СЃРІСЏР·Рё РёР·РІР»РµС‡РµРЅРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р°
-    popped->prev = NULL;
     popped->next = NULL;
-
-    return 0; // РЈСЃРїРµС…
+    popped->prev = NULL;
+    return popped;
 }
 
-void insert_to_queue(Token* queue_end, Token* item)
-{
-    if (queue_end == NULL || item == NULL) return;
+// Функции для работы с очередью
+void enqueue(Token** queue_front, Token** queue_rear, Token* item) {
+    if (item == NULL) return;
 
-    // Р’СЃС‚Р°РІР»СЏРµРј СЌР»РµРјРµРЅС‚ РїРѕСЃР»Рµ С‚РµРєСѓС‰РµРіРѕ РєРѕРЅС†Р° РѕС‡РµСЂРµРґРё
-    item->prev = queue_end;
-    item->next = queue_end->next;
+    item->next = NULL;
+    item->prev = *queue_rear;
 
-    if (queue_end->next != NULL) {
-        queue_end->next->prev = item;
+    if (*queue_rear != NULL) {
+        (*queue_rear)->next = item;
     }
-    queue_end->next = item;
+
+    *queue_rear = item;
+
+    if (*queue_front == NULL) {
+        *queue_front = item;
+    }
 }
 
-int get_from_queue(Token* queue_end, Token* item)
-{
-    if (queue_end == NULL || item == NULL) {
-        return -1; // РћС€РёР±РєР°: РЅРµРІРµСЂРЅС‹Рµ РїР°СЂР°РјРµС‚СЂС‹
+Token* dequeue(Token** queue_front, Token** queue_rear) {
+    if (queue_front == NULL || *queue_front == NULL) {
+        return NULL;
     }
 
-    // РќР°С…РѕРґРёРј РЅР°С‡Р°Р»Рѕ РѕС‡РµСЂРµРґРё (РёС‰РµРј СЌР»РµРјРµРЅС‚ СЃ prev == NULL)
-    Token* current = queue_end;
-    while (current->prev != NULL) {
-        current = current->prev;
+    Token* dequeued = *queue_front;
+    *queue_front = (*queue_front)->next;
+
+    if (*queue_front != NULL) {
+        (*queue_front)->prev = NULL;
+    } else {
+        *queue_rear = NULL;
     }
 
-    // Р•СЃР»Рё current РІСЃРµ РµС‰Рµ СѓРєР°Р·С‹РІР°РµС‚ РЅР° queue_end, Р·РЅР°С‡РёС‚ РѕС‡РµСЂРµРґСЊ РїСѓСЃС‚Р°
-    if (current == queue_end) {
-        return -1; // РћС‡РµСЂРµРґСЊ РїСѓСЃС‚Р°
-    }
-
-    // РљРѕРїРёСЂСѓРµРј РґР°РЅРЅС‹Рµ РїРµСЂРІРѕРіРѕ СЌР»РµРјРµРЅС‚Р°
-    item->type = current->type;
-    item->value = current->value;
-
-    // РЈРґР°Р»СЏРµРј РїРµСЂРІС‹Р№ СЌР»РµРјРµРЅС‚ РёР· РѕС‡РµСЂРµРґРё
-    if (current->next != NULL) {
-        current->next->prev = NULL;
-    }
-
-    // РћС‡РёС‰Р°РµРј СЃРІСЏР·Рё РёР·РІР»РµС‡РµРЅРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р°
-    current->next = NULL;
-    current->prev = NULL;
-
-    return 0; // РЈСЃРїРµС…
+    dequeued->next = NULL;
+    dequeued->prev = NULL;
+    return dequeued;
 }
 
-
-
-// Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РїРѕР·РёС†РёРё РІ РёСЃС…РѕРґРЅРѕРј РєРѕРґРµ
+// Глобальные переменные для позиции в исходном коде
 static const char *src;
 static int pos = 0;
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕРіРѕ С‚РѕРєРµРЅР°
-Token *create_token(TokenType type, const char *value) {
+// Функция для создания нового токена
+Token *create_token(TokenT type, const char *value) {
     Token *token = (Token*)malloc(sizeof(Token));
     token->type = type;
     token->value = strdup(value);
@@ -196,7 +112,7 @@ Token *create_token(TokenType type, const char *value) {
     return token;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РґРѕР±Р°РІР»РµРЅРёСЏ С‚РѕРєРµРЅР° РІ РєРѕРЅРµС† СЃРїРёСЃРєР°
+// Функция для добавления токена в конец списка
 void add_token(Token **head, Token **tail, Token *token) {
     if (*head == NULL) {
         *head = token;
@@ -208,7 +124,7 @@ void add_token(Token **head, Token **tail, Token *token) {
     }
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РѕСЃРІРѕР±РѕР¶РґРµРЅРёСЏ РїР°РјСЏС‚Рё СЃРїРёСЃРєР° С‚РѕРєРµРЅРѕРІ
+// Функция для освобождения памяти списка токенов
 void free_tokens(Token *head) {
     Token *current = head;
     while (current != NULL) {
@@ -219,17 +135,17 @@ void free_tokens(Token *head) {
     }
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РїСЂРѕРїСѓСЃРєР° РїСЂРѕР±РµР»СЊРЅС‹С… СЃРёРјРІРѕР»РѕРІ
+// Функция для пропуска пробельных символов
 void skip_whitespace() {
-    while (isspace(src[pos])) {
+    while (src[pos] != '\0' && isspace((unsigned char)src[pos])) {
         pos++;
     }
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ С‡С‚РµРЅРёСЏ С‡РёСЃР»Р°
+// Функция для чтения числа
 char *read_number() {
     int start = pos;
-    while (isdigit(src[pos]) || src[pos] == '.') {
+    while (isdigit((unsigned char)src[pos]) || src[pos] == '.') {
         pos++;
     }
     int length = pos - start;
@@ -239,10 +155,10 @@ char *read_number() {
     return number;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ С‡С‚РµРЅРёСЏ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂР°
+// Функция для чтения идентификатора
 char *read_identifier() {
     int start = pos;
-    while (isalnum(src[pos]) || src[pos] == '_') {
+    while (isalnum((unsigned char)src[pos]) || src[pos] == '_') {
         pos++;
     }
     int length = pos - start;
@@ -252,7 +168,7 @@ char *read_identifier() {
     return ident;
 }
 
-// РћСЃРЅРѕРІРЅР°СЏ С„СѓРЅРєС†РёСЏ Р»РµРєСЃРёС‡РµСЃРєРѕРіРѕ Р°РЅР°Р»РёР·Р°
+// Основная функция лексического анализа
 Token *lex(const char *input) {
     src = input;
     pos = 0;
@@ -267,8 +183,8 @@ Token *lex(const char *input) {
 
         if (current == '\0') break;
 
-        // Р§РёСЃР»Р°
-        if (isdigit(current)) {
+        // Числа
+        if (isdigit((unsigned char)current)) {
             char *number = read_number();
             Token *token = create_token(TOK_NUMBER, number);
             add_token(&head, &tail, token);
@@ -276,16 +192,26 @@ Token *lex(const char *input) {
             continue;
         }
 
-        // РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂС‹
-        if (isalpha(current) || current == '_') {
+        // Идентификаторы и функции
+        if (isalpha((unsigned char)current) || current == '_') {
             char *ident = read_identifier();
-            Token *token = create_token(TOK_IDENT, ident);
+
+            // Проверяем, является ли идентификатор функцией
+            int is_func = 0;
+            int next_pos = pos;
+            skip_whitespace();
+            if (src[pos] == '(') {
+                is_func = 1;
+            }
+            pos = next_pos; // Возвращаем позицию
+
+            Token *token = create_token(is_func ? TOK_FUNCTION : TOK_IDENT, ident);
             add_token(&head, &tail, token);
             free(ident);
             continue;
         }
 
-        // РћРїРµСЂР°С‚РѕСЂС‹ Рё СЃРєРѕР±РєРё
+        // Операторы, скобки и новые символы
         Token *token = NULL;
         switch (current) {
             case '+': token = create_token(TOK_PLUS, "+"); break;
@@ -295,8 +221,11 @@ Token *lex(const char *input) {
             case '(': token = create_token(TOK_LPAREN, "("); break;
             case ')': token = create_token(TOK_RPAREN, ")"); break;
             case '=': token = create_token(TOK_ASSIGN, "="); break;
+            case '[': token = create_token(TOK_LBRACKET, "["); break;
+            case ']': token = create_token(TOK_RBRACKET, "]"); break;
+            case ',': token = create_token(TOK_COMMA, ","); break;
             default:
-                printf("РќРµРёР·РІРµСЃС‚РЅС‹Р№ СЃРёРјРІРѕР»: %c\n", current);
+                printf("Неизвестный символ: %c\n", current);
                 pos++;
                 continue;
         }
@@ -305,94 +234,166 @@ Token *lex(const char *input) {
         pos++;
     }
 
-    // Р”РѕР±Р°РІР»СЏРµРј С‚РѕРєРµРЅ РєРѕРЅС†Р° С„Р°Р№Р»Р°
+    // Добавляем токен конца файла
     Token *eof = create_token(TOK_EOF, "EOF");
     add_token(&head, &tail, eof);
 
     return head;
 }
 
-void shuntingYard(Token *head, Token *outQueue)
-{
-    Token* queue_end;
-    Token* stack_top;
+// Функция для получения приоритета оператора
+int get_priority(TokenT type) {
+    switch (type) {
+        case TOK_PLUS:
+        case TOK_MINUS:
+            return 1;
+        case TOK_MULTIPLY:
+        case TOK_DIVIDE:
+            return 2;
+        case TOK_ASSIGN:
+            return 0;
+        default:
+            return -1;
+    }
+}
+
+// Алгоритм сортировочной станции (Shunting Yard)
+Token* shuntingYard(Token *head) {
+    if (head == NULL) return NULL;
+
+    Token *output_front = NULL;
+    Token *output_rear = NULL;
+    Token *stack_top = NULL;
 
     Token *current = head;
-    /*
-    TOK_EOF,        // РљРѕРЅРµС† РІС…РѕРґРЅРѕРіРѕ РїРѕС‚РѕРєР°
-    TOK_NUMBER,     // Р§РёСЃР»Рѕ
-    TOK_IDENT,      // РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ (РїРµСЂРµРјРµРЅРЅР°СЏ)
-    TOK_PLUS,       // РћРїРµСЂР°С‚РѕСЂ +
-    TOK_MINUS,      // РћРїРµСЂР°С‚РѕСЂ -
-    TOK_MULTIPLY,   // РћРїРµСЂР°С‚РѕСЂ *
-    TOK_DIVIDE,     // РћРїРµСЂР°С‚РѕСЂ /
-    TOK_LPAREN,     // Р›РµРІР°СЏ РєСЂСѓРіР»Р°СЏ СЃРєРѕР±РєР°
-    TOK_RPAREN,     // РџСЂР°РІР°СЏ РєСЂСѓРіР»Р°СЏ СЃРєРѕР±РєР°
-    TOK_ASSIGN
-    */
 
-    while(current != NULL)
-    {
-        switch(current->type)
-        {
-        //case Token::INT_LITERAL:
-        case TOK_NUMBER:
-            insert_to_queue(queue_end,current);
-            break;
-        case TOK_LPAREN:
-        case Token::FUNCTION:
-            stack.push(token);
-            break;
+    while (current != NULL && current->type != TOK_EOF) {
+        switch (current->type) {
+            case TOK_NUMBER:
+            case TOK_IDENT:
+                enqueue(&output_front, &output_rear, create_token(current->type, current->value));
+                break;
+
+            case TOK_FUNCTION:
+                push_to_stack(&stack_top, create_token(current->type, current->value));
+                break;
+
+            case TOK_PLUS:
+            case TOK_MINUS:
+            case TOK_MULTIPLY:
+            case TOK_DIVIDE:
+            case TOK_ASSIGN:
+                {
+                    int current_priority = get_priority(current->type);
+
+                    while (stack_top != NULL &&
+                           get_priority(stack_top->type) >= current_priority) {
+                        Token* op = pop_from_stack(&stack_top);
+                        enqueue(&output_front, &output_rear, op);
+                    }
+
+                    push_to_stack(&stack_top, create_token(current->type, current->value));
+                }
+                break;
+
+            case TOK_LPAREN:
+                push_to_stack(&stack_top, create_token(current->type, current->value));
+                break;
+
+            case TOK_RPAREN:
+                while (stack_top != NULL && stack_top->type != TOK_LPAREN) {
+                    Token* op = pop_from_stack(&stack_top);
+                    enqueue(&output_front, &output_rear, op);
+                }
+
+                if (stack_top != NULL && stack_top->type == TOK_LPAREN) {
+                    Token* temp = pop_from_stack(&stack_top);
+                    free(temp->value);
+                    free(temp);
+                }
+
+                if (stack_top != NULL && stack_top->type == TOK_FUNCTION) {
+                    Token* func = pop_from_stack(&stack_top);
+                    enqueue(&output_front, &output_rear, func);
+                }
+                break;
+
+            default:
+                // Игнорируем другие токены
+                break;
         }
 
         current = current->next;
     }
 
-    while (current != NULL) {
-        printf("  [%s: %s]\n", type_names[current->type], current->value);
-        current = current->prev;
+    // Перемещаем все оставшиеся операторы из стека в выходную очередь
+    while (stack_top != NULL) {
+        Token* op = pop_from_stack(&stack_top);
+        enqueue(&output_front, &output_rear, op);
     }
+
+    return output_front;
 }
 
-
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РїРµС‡Р°С‚Рё СЃРїРёСЃРєР° С‚РѕРєРµРЅРѕРІ
+// Функция для печати списка токенов
 void print_tokens(Token *head) {
     const char *type_names[] = {
         "EOF", "NUMBER", "IDENT", "PLUS", "MINUS",
-        "MULTIPLY", "DIVIDE", "LPAREN", "RPAREN", "ASSIGN"
+        "MULTIPLY", "DIVIDE", "LPAREN", "RPAREN",
+        "LBRACKET", "RBRACKET", "COMMA", "FUNCTION", "ASSIGN"
     };
 
     Token *current = head;
-    printf("РўРѕРєРµРЅС‹:\n");
+    printf("Токены:\n");
     while (current != NULL) {
         printf("  [%s: %s]\n", type_names[current->type], current->value);
         current = current->next;
     }
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РїРµС‡Р°С‚Рё С‚РѕРєРµРЅРѕРІ РІ РѕР±СЂР°С‚РЅРѕРј РїРѕСЂСЏРґРєРµ
+// Функция для печати токенов в обратном порядке
 void print_tokens_reverse(Token *tail) {
     const char *type_names[] = {
         "EOF", "NUMBER", "IDENT", "PLUS", "MINUS",
-        "MULTIPLY", "DIVIDE", "LPAREN", "RPAREN", "ASSIGN"
+        "MULTIPLY", "DIVIDE", "LPAREN", "RPAREN",
+        "LBRACKET", "RBRACKET", "COMMA", "FUNCTION", "ASSIGN"
     };
 
     Token *current = tail;
-    printf("РўРѕРєРµРЅС‹ (РІ РѕР±СЂР°С‚РЅРѕРј РїРѕСЂСЏРґРєРµ):\n");
+    printf("Токены (в обратном порядке):\n");
     while (current != NULL) {
         printf("  [%s: %s]\n", type_names[current->type], current->value);
         current = current->prev;
     }
 }
 
-// РџСЂРёРјРµСЂ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ
+// Функция для печати выражения в ОПЗ
+void print_rpn(Token* head) {
+    printf("Выражение в ОПЗ: ");
+    Token* current = head;
+    while (current != NULL) {
+        printf("%s ", current->value);
+        current = current->next;
+    }
+    printf("\n");
+}
+
+// Пример использования
 int main() {
-    const char *input = "x! = 42 + (y * 3.14) - variable_name";
+    SetConsoleCP(1251);
+    SetConsoleOutputCP(1251);
+
+    const char *input = "x = 42 + (y * 3.14)";
+    printf("Входное выражение: %s\n", input);
 
     Token *tokens = lex(input);
-
     print_tokens(tokens);
 
+    Token* rpn = shuntingYard(tokens);
+    if (rpn != NULL) {
+        print_rpn(rpn);
+        free_tokens(rpn);
+    }
 
     free_tokens(tokens);
 
