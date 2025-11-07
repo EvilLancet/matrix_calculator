@@ -34,9 +34,10 @@
 1759504063 f:\marinelogbook\matrix_calculator\error.h
 	<string>
 
-1760610325 source:c:\users\timurr\documents\github\matrix_calculator2\main.cpp
+1761217248 source:c:\users\timurr\documents\github\matrix_calculator2\main.cpp
 	<windows.h>
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
+	<ctype.h>
 

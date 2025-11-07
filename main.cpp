@@ -4,6 +4,14 @@
 #include <string.h>
 #include <ctype.h>
 
+typedef enum
+{
+    CT_VECTOR,
+    CT_FLOAT,
+    CT_INT,
+    CT_STRING
+} ContainerType;
+
 // Типы токенов
 typedef enum {
     TOK_EOF,        // Конец входного потока
@@ -22,10 +30,40 @@ typedef enum {
     TOK_ASSIGN      // Оператор присваивания =
 } TokenT;
 
+
+typedef struct Container {
+    ContainerType type;
+    void *data;
+    void (*free_func)(void*);     // Функция освобождения данных
+    void (*print_func)(void*);    // Функция печати (опционально)
+} Container;
+
+
+typedef struct {
+    char *value;
+    size_t length;
+} StringContainer;
+
+typedef struct {
+    int value;
+} IntContainer;
+
+typedef struct {
+    double value;
+} FloatContainer;
+
+typedef struct {
+    double x;
+    double y;
+    double z;
+} VectorContainer;
+
+
 // Структура токена (узел двусвязного списка)
 typedef struct Token {
     TokenT type;
     char *value;
+    Container *container;
     struct Token *prev;
     struct Token *next;
 } Token;
@@ -454,7 +492,7 @@ int main() {
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
 
-    const char *input = "b = a = (42 - 10) * 3 + 10 * 10";
+    const char *input = "(42 - 10) * 3 + 10 * (0-10) ";
     printf("Входное выражение: %s\n", input);
 
     Token *tokens = lex(input);
