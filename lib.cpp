@@ -1,0 +1,409 @@
+#include "lib.h"
+
+// ------------ функции для работы с переменными --------------
+
+
+Ident* create_ident(char *name, Token *value) {
+    Ident *new_ident = (Ident*)malloc(sizeof(Ident));
+    if (!new_ident) return nullptr;
+
+    new_ident->name = strdup(name); // Копируем строку
+    new_ident->value = value;
+    new_ident->prev = nullptr;
+    new_ident->next = nullptr;
+
+    return new_ident;
+}
+
+// Добавление в начало списка
+void add_ident(Ident **first, Ident *new_ident) {
+    if (new_ident == nullptr) return;
+
+    new_ident->next = *first;
+    new_ident->prev = nullptr;
+
+    if (*first)
+        (*first)->prev = new_ident;
+
+    *first = new_ident;
+}
+
+// Удаление идентификатора из списка
+void remove_ident(Ident **first, Ident *ident_to_remove) {
+    if (!first || !*first || !ident_to_remove) return;
+
+    // Если удаляемый элемент - первый
+    if (*first == ident_to_remove) {
+        *first = ident_to_remove->next;
+    }
+
+    // Перестраиваем связи
+    if (ident_to_remove->prev)
+        ident_to_remove->prev->next = ident_to_remove->next;
+
+    if (ident_to_remove->next)
+        ident_to_remove->next->prev = ident_to_remove->prev;
+
+    // Очищаем память
+    free(ident_to_remove->name);
+    free(ident_to_remove);
+}
+
+// Поиск идентификатора по имени
+Ident* find_ident(Ident *first, const char *name) {
+    Ident *current = first;
+
+    while (current) {
+        if (strcmp(current->name, name) == 0)
+            return current;
+        current = current->next;
+    }
+
+    return nullptr; // Не найден
+}
+
+// ------------ функции для работы с контейнерами --------------
+
+
+// Функции освобождения данных контейнеров
+void free_int_container(void *data) {
+    if (data) free(data);
+}
+
+void free_float_container(void *data) {
+    if (data) free(data);
+}
+
+void free_string_container(void *data) {
+    StringContainer *sc = (StringContainer*)data;
+    if (sc) {
+        free(sc->value);
+        free(sc);
+    }
+}
+
+void free_vector_container(void *data) {
+    if (data) free(data);
+}
+
+// Функции печати контейнеров
+void print_int_container(void *data) {
+    if (data) {
+        IntContainer *ic = (IntContainer*)data;
+        printf("%d", ic->value);
+    }
+}
+
+void print_float_container(void *data) {
+    if (data) {
+        FloatContainer *fc = (FloatContainer*)data;
+        printf("%.6f", fc->value);
+    }
+}
+
+void print_string_container(void *data) {
+    if (data) {
+        StringContainer *sc = (StringContainer*)data;
+        printf("%s", sc->value);
+    }
+}
+
+void print_vector_container(void *data) {
+    if (data) {
+        VectorContainer *vc = (VectorContainer*)data;
+        printf("[%.6f, %.6f, %.6f]", vc->x, vc->y, vc->z);
+    }
+}
+
+// Функции создания контейнеров
+Container* create_int_container(int value) {
+    Container *container = (Container*)malloc(sizeof(Container));
+    IntContainer *data = (IntContainer*)malloc(sizeof(IntContainer));
+
+    data->value = value;
+    container->type = CT_INT;
+    container->data = data;
+    container->free_func = free_int_container;
+    container->print_func = print_int_container;
+
+    return container;
+}
+
+Container* create_float_container(double value) {
+    Container *container = (Container*)malloc(sizeof(Container));
+    FloatContainer *data = (FloatContainer*)malloc(sizeof(FloatContainer));
+
+    data->value = value;
+    container->type = CT_FLOAT;
+    container->data = data;
+    container->free_func = free_float_container;
+    container->print_func = print_float_container;
+
+    return container;
+}
+
+Container* create_string_container(const char *value) {
+    Container *container = (Container*)malloc(sizeof(Container));
+    StringContainer *data = (StringContainer*)malloc(sizeof(StringContainer));
+
+    data->value = strdup(value);
+    data->length = strlen(value);
+    container->type = CT_STRING;
+    container->data = data;
+    container->free_func = free_string_container;
+    container->print_func = print_string_container;
+
+    return container;
+}
+
+Container* create_vector_container(double x, double y, double z) {
+    Container *container = (Container*)malloc(sizeof(Container));
+    VectorContainer *data = (VectorContainer*)malloc(sizeof(VectorContainer));
+
+    data->x = x;
+    data->y = y;
+    data->z = z;
+    container->type = CT_VECTOR;
+    container->data = data;
+    container->free_func = free_vector_container;
+    container->print_func = print_vector_container;
+
+    return container;
+}
+
+// Функция для освобождения контейнера
+void free_container(Container *container) {
+    if (container) {
+        if (container->free_func && container->data) {
+            container->free_func(container->data);
+        }
+        free(container);
+    }
+}
+
+// Функция для печати контейнера
+void print_container(Container *container) {
+    if (container && container->print_func) {
+        container->print_func(container->data);
+    }
+}
+
+// Дополнительные утилиты для работы с контейнерами
+Container* container_deep_copy(Container *src) {
+    if (!src) return NULL;
+
+    switch (src->type) {
+        case CT_INT: {
+            IntContainer *ic = (IntContainer*)src->data;
+            return create_int_container(ic->value);
+        }
+        case CT_FLOAT: {
+            FloatContainer *fc = (FloatContainer*)src->data;
+            return create_float_container(fc->value);
+        }
+        case CT_STRING: {
+            StringContainer *sc = (StringContainer*)src->data;
+            return create_string_container(sc->value);
+        }
+        case CT_VECTOR: {
+            VectorContainer *vc = (VectorContainer*)src->data;
+            return create_vector_container(vc->x, vc->y, vc->z);
+        }
+        default:
+            return NULL;
+    }
+}
+
+int container_compare(Container *a, Container *b) {
+    if (!a || !b) return 0;
+    if (a->type != b->type) return 0;
+
+    switch (a->type) {
+        case CT_INT: {
+            IntContainer *ia = (IntContainer*)a->data;
+            IntContainer *ib = (IntContainer*)b->data;
+            return ia->value == ib->value;
+        }
+        case CT_FLOAT: {
+            FloatContainer *fa = (FloatContainer*)a->data;
+            FloatContainer *fb = (FloatContainer*)b->data;
+            return fabs(fa->value - fb->value) < 1e-10;
+        }
+        case CT_STRING: {
+            StringContainer *sa = (StringContainer*)a->data;
+            StringContainer *sb = (StringContainer*)b->data;
+            return strcmp(sa->value, sb->value) == 0;
+        }
+        case CT_VECTOR: {
+            VectorContainer *va = (VectorContainer*)a->data;
+            VectorContainer *vb = (VectorContainer*)b->data;
+            return fabs(va->x - vb->x) < 1e-10 &&
+                   fabs(va->y - vb->y) < 1e-10 &&
+                   fabs(va->z - vb->z) < 1e-10;
+        }
+        default:
+            return 0;
+    }
+}
+
+
+// ------------ функции для работы с токенами --------------
+
+
+Token *create_token(TokenT type, const char *value) {
+    Token *token = (Token*)malloc(sizeof(Token));
+    token->type = type;
+    token->value = value ? strdup(value) : NULL;
+    token->container = NULL;  // Инициализируем контейнер как NULL
+    token->prev = NULL;
+    token->next = NULL;
+    return token;
+}
+
+/*
+// Функция для создания нового токена
+Token *create_token(TokenT type, const char *value) {
+    Token *token = (Token*)malloc(sizeof(Token));
+    token->type = type;
+    token->value = strdup(value);
+    token->prev = nullptr;
+    token->next = nullptr;
+    return token;
+}
+*/
+
+
+// Функция для создания токена с контейнером
+Token *create_token_with_container(TokenT type, const char *value, Container *container) {
+    Token *token = create_token(type, value);
+    if (token) {
+        token->container = container;
+    }
+    return token;
+}
+
+// Функция для добавления токена в конец списка
+void add_token(Token **head, Token **tail, Token *token) {
+    if (token == NULL) return;
+
+    if (*head == NULL) {
+        *head = token;
+        *tail = token;
+    } else {
+        (*tail)->next = token;
+        token->prev = *tail;
+        *tail = token;
+    }
+}
+
+// Функция для освобождения памяти одного токена
+void free_token(Token *token) {
+    if (token == NULL) return;
+
+    // Освобождаем значение строки
+    if (token->value) {
+        free(token->value);
+    }
+
+    // Освобождаем контейнер, если он есть
+    if (token->container) {
+        free_container(token->container);
+    }
+
+    free(token);
+}
+
+// Функция для освобождения памяти всего списка токенов
+void free_tokens(Token *head) {
+    Token *current = head;
+    while (current != NULL) {
+        Token *next = current->next;
+        free_token(current);
+        current = next;
+    }
+}
+
+// Функция для установки контейнера в токен
+void token_set_container(Token *token, Container *container) {
+    if (token == NULL) return;
+
+    // Освобождаем старый контейнер, если он был
+    if (token->container) {
+        free_container(token->container);
+    }
+
+    token->container = container;
+}
+
+// Функция для получения контейнера из токена
+Container *token_get_container(const Token *token) {
+    return token ? token->container : NULL;
+}
+
+// Функция для создания токена числа (автоматически определяет int/float)
+Token *create_number_token(const char *value) {
+    if (value == NULL) return NULL;
+
+    Token *token = create_token(TOK_NUMBER, value);
+    if (token) {
+        // Проверяем, содержит ли строка точку (дробное число)
+        if (strchr(value, '.') != NULL) {
+            double float_value = atof(value);
+            token->container = create_float_container(float_value);
+        } else {
+            int int_value = atoi(value);
+            token->container = create_int_container(int_value);
+        }
+    }
+    return token;
+}
+
+// Функция для создания токена строки
+Token *create_string_token(TokenT type, const char *value) {
+    if (value == NULL) return NULL;
+
+    Token *token = create_token(type, value);
+    if (token) {
+        token->container = create_string_container(value);
+    }
+    return token;
+}
+
+// Функция для создания токена вектора
+Token *create_vector_token(double x, double y, double z) {
+    Token *token = create_token(TON_VEC, NULL); // или специальный тип для вектора
+    if (token) {
+        token->container = create_vector_container(x, y, z);
+    }
+    return token;
+}
+
+// Функция для копирования токена (глубокая копия)
+Token *copy_token(const Token *src) {
+    if (src == NULL) return NULL;
+
+    Token *copy = create_token(src->type, src->value);
+    if (copy && src->container) {
+        copy->container = container_deep_copy(src->container);
+    }
+    return copy;
+}
+
+// Функция для печати токена (для отладки)
+void print_token(const Token *token) {
+    if (token == NULL) {
+        printf("NULL_TOKEN");
+        return;
+    }
+
+    printf("Token{type=%d, container=", token->type);
+
+    if (token->container) {
+        print_container(token->container);
+    } else {
+        printf("NULL");
+    }
+
+    printf("}\n");
+}
+

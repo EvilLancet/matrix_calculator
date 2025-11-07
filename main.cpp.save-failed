@@ -1,18 +1,79 @@
+#include <windows.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
-#include "lib.h"
+typedef enum
+{
+    CT_VECTOR,
+    CT_FLOAT,
+    CT_INT,
+    CT_STRING
+} ContainerType;
 
+// Типы токенов
+typedef enum {
+    TOK_EOF,        // Конец входного потока
+    TOK_NUMBER,     // Число
+    TOK_IDENT,      // Идентификатор (переменная)
+    TOK_PLUS,       // Оператор +
+    TOK_MINUS,      // Оператор -
+    TOK_UMINUS,     // Унарный минус
+    TOK_MULTIPLY,   // Оператор *
+    TOK_DIVIDE,     // Оператор /
+    TOK_LPAREN,     // Левая круглая скобка
+    TOK_RPAREN,     // Правая круглая скобка
+    TOK_LBRACKET,   // [
+    TOK_RBRACKET,   // ]
+    TOK_COMMA,      // ,
+    TOK_FUNCTION,   // функция
+    TOK_ASSIGN      // Оператор присваивания =
+} TokenT;
 
-Ident* FirstIdent;
+typedef struct Container {
+    ContainerType type;
+    void *data;
+    void (*free_func)(void*);     // Функция освобождения данных
+    void (*print_func)(void*);    // Функция печати (опционально)
+} Container;
 
+typedef struct {
+    char *value;
+    size_t length;
+} StringContainer;
+
+typedef struct {
+    int value;
+} IntContainer;
+
+typedef struct {
+    double value;
+} FloatContainer;
+
+typedef struct {
+    double x;
+    double y;
+    double z;
+} VectorContainer;
+
+// Структура токена (узел двусвязного списка)
+typedef struct Token {
+    TokenT type;
+    char *value;
+    Container *container;
+    struct Token *prev;
+    struct Token *next;
+} Token;
 
 // Функции для работы со стеком
 void push_to_stack(Token** stack_top, Token* item) {
-    if (stack_top == nullptr || item == nullptr) return;
+    if (stack_top == NULL || item == NULL) return;
 
-    item->prev = nullptr;
+    item->prev = NULL;
     item->next = *stack_top;
 
-    if (*stack_top != nullptr) {
+    if (*stack_top != NULL) {
         (*stack_top)->prev = item;
     }
 
@@ -20,56 +81,56 @@ void push_to_stack(Token** stack_top, Token* item) {
 }
 
 Token* pop_from_stack(Token** stack_top) {
-    if (stack_top == nullptr || *stack_top == nullptr) {
-        return nullptr;
+    if (stack_top == NULL || *stack_top == NULL) {
+        return NULL;
     }
 
     Token* popped = *stack_top;
     *stack_top = (*stack_top)->next;
 
-    if (*stack_top != nullptr) {
-        (*stack_top)->prev = nullptr;
+    if (*stack_top != NULL) {
+        (*stack_top)->prev = NULL;
     }
 
-    popped->next = nullptr;
-    popped->prev = nullptr;
+    popped->next = NULL;
+    popped->prev = NULL;
     return popped;
 }
 
 // Функции для работы с очередью
 void enqueue(Token** queue_front, Token** queue_rear, Token* item) {
-    if (item == nullptr) return;
+    if (item == NULL) return;
 
-    item->next = nullptr;
+    item->next = NULL;
     item->prev = *queue_rear;
 
-    if (*queue_rear != nullptr) {
+    if (*queue_rear != NULL) {
         (*queue_rear)->next = item;
     }
 
     *queue_rear = item;
 
-    if (*queue_front == nullptr) {
+    if (*queue_front == NULL) {
         *queue_front = item;
     }
 }
 
 Token* dequeue(Token** queue_front, Token** queue_rear) {
-    if (queue_front == nullptr || *queue_front == nullptr) {
-        return nullptr;
+    if (queue_front == NULL || *queue_front == NULL) {
+        return NULL;
     }
 
     Token* dequeued = *queue_front;
     *queue_front = (*queue_front)->next;
 
-    if (*queue_front != nullptr) {
-        (*queue_front)->prev = nullptr;
+    if (*queue_front != NULL) {
+        (*queue_front)->prev = NULL;
     } else {
-        *queue_rear = nullptr;
+        *queue_rear = NULL;
     }
 
-    dequeued->next = nullptr;
-    dequeued->prev = nullptr;
+    dequeued->next = NULL;
+    dequeued->prev = NULL;
     return dequeued;
 }
 
@@ -77,8 +138,38 @@ Token* dequeue(Token** queue_front, Token** queue_rear) {
 static const char *src;
 static int pos = 0;
 
+// Функция для создания нового токена
+Token *create_token(TokenT type, const char *value) {
+    Token *token = (Token*)malloc(sizeof(Token));
+    token->type = type;
+    token->value = strdup(value);
+    token->prev = NULL;
+    token->next = NULL;
+    return token;
+}
 
+// Функция для добавления токена в конец списка
+void add_token(Token **head, Token **tail, Token *token) {
+    if (*head == NULL) {
+        *head = token;
+        *tail = token;
+    } else {
+        (*tail)->next = token;
+        token->prev = *tail;
+        *tail = token;
+    }
+}
 
+// Функция для освобождения памяти списка токенов
+void free_tokens(Token *head) {
+    Token *current = head;
+    while (current != NULL) {
+        Token *next = current->next;
+        free(current->value);
+        free(current);
+        current = next;
+    }
+}
 
 // Функция для пропуска пробельных символов
 void skip_whitespace() {
@@ -119,7 +210,7 @@ int is_unary_minus(Token *last_token) {
     // 1. Это первый токен
     // 2. После оператора (+, -, *, /, =)
     // 3. После открывающей скобки
-    if (last_token == nullptr) {
+    if (last_token == NULL) {
         return 1;
     }
 
@@ -143,9 +234,9 @@ Token *lex(const char *input) {
     src = input;
     pos = 0;
 
-    Token *head = nullptr;
-    Token *tail = nullptr;
-    Token *last_token = nullptr;
+    Token *head = NULL;
+    Token *tail = NULL;
+    Token *last_token = NULL;
 
     while (src[pos] != '\0') {
         skip_whitespace();
@@ -185,7 +276,7 @@ Token *lex(const char *input) {
         }
 
         // Операторы, скобки и новые символы
-        Token *token = nullptr;
+        Token *token = NULL;
         switch (current) {
             case '+': token = create_token(TOK_PLUS, "+"); break;
             case '-':
@@ -199,15 +290,10 @@ Token *lex(const char *input) {
             case '*': token = create_token(TOK_MULTIPLY, "*"); break;
             case '/': token = create_token(TOK_DIVIDE, "/"); break;
             case '(': token = create_token(TOK_LPAREN, "("); break;
-            case ']':
             case ')': token = create_token(TOK_RPAREN, ")"); break;
             case '=': token = create_token(TOK_ASSIGN, "="); break;
-            case '[':
-                token = create_token(TOK_FUNCTION, "vec");
-                add_token(&head, &tail, token);
-                token = create_token(TOK_LPAREN, "(");
-                break;
-            //case ']': token = create_token(TOK_RBRACKET, "]"); break;
+            case '[': token = create_token(TOK_LBRACKET, "["); break;
+            case ']': token = create_token(TOK_RBRACKET, "]"); break;
             case ',': token = create_token(TOK_COMMA, ","); break;
             default:
                 printf("Неизвестный символ: %c\n", current);
@@ -247,15 +333,15 @@ int get_priority(TokenT type) {
 
 // Алгоритм сортировочной станции (Shunting Yard)
 Token* shuntingYard(Token *head) {
-    if (head == nullptr) return nullptr;
+    if (head == NULL) return NULL;
 
-    Token *output_front = nullptr;
-    Token *output_rear = nullptr;
-    Token *stack_top = nullptr;
+    Token *output_front = NULL;
+    Token *output_rear = NULL;
+    Token *stack_top = NULL;
 
     Token *current = head;
 
-    while (current != nullptr && current->type != TOK_EOF) {
+    while (current != NULL && current->type != TOK_EOF) {
         switch (current->type) {
             case TOK_NUMBER:
             case TOK_IDENT:
@@ -275,7 +361,7 @@ Token* shuntingYard(Token *head) {
                 {
                     int current_priority = get_priority(current->type);
 
-                    while (stack_top != nullptr &&
+                    while (stack_top != NULL &&
                            get_priority(stack_top->type) >= current_priority &&
                            stack_top->type != TOK_LPAREN) {
                         Token* op = pop_from_stack(&stack_top);
@@ -291,18 +377,18 @@ Token* shuntingYard(Token *head) {
                 break;
 
             case TOK_RPAREN:
-                while (stack_top != nullptr && stack_top->type != TOK_LPAREN) {
+                while (stack_top != NULL && stack_top->type != TOK_LPAREN) {
                     Token* op = pop_from_stack(&stack_top);
                     enqueue(&output_front, &output_rear, op);
                 }
 
-                if (stack_top != nullptr && stack_top->type == TOK_LPAREN) {
+                if (stack_top != NULL && stack_top->type == TOK_LPAREN) {
                     Token* temp = pop_from_stack(&stack_top);
                     free(temp->value);
                     free(temp);
                 }
 
-                if (stack_top != nullptr && stack_top->type == TOK_FUNCTION) {
+                if (stack_top != NULL && stack_top->type == TOK_FUNCTION) {
                     Token* func = pop_from_stack(&stack_top);
                     enqueue(&output_front, &output_rear, func);
                 }
@@ -317,7 +403,7 @@ Token* shuntingYard(Token *head) {
     }
 
     // Перемещаем все оставшиеся операторы из стека в выходную очередь
-    while (stack_top != nullptr) {
+    while (stack_top != NULL) {
         Token* op = pop_from_stack(&stack_top);
         enqueue(&output_front, &output_rear, op);
     }
@@ -326,22 +412,15 @@ Token* shuntingYard(Token *head) {
 }
 
 double countRPN(Token *head) {
-
-    Token *stack_top = nullptr;
-
     double stack[100]; // Стек для чисел
     int top = -1;      // Вершина стека
 
     Token *current = head;
-    Token *next = current->next;
-    while (current != nullptr) {
+    while (current != NULL) {
         switch (current->type) {
             case TOK_NUMBER: {
                 // Преобразуем строку в число и помещаем в стек
                 double num = atof(current->value);
-
-                //push_to_stack(&stack_top, current);
-
                 stack[++top] = num;
                 break;
             }
@@ -393,8 +472,6 @@ double countRPN(Token *head) {
                 }
                 stack[top] = -stack[top];
                 break;
-            case TOK_ASSIGN:
-                break;
 
             case TOK_FUNCTION:
                 // Проверяем количество аргументов для функций
@@ -403,7 +480,7 @@ double countRPN(Token *head) {
                         printf("Ошибка: функция cos требует один аргумент\n");
                         return 0;
                     }
-                    //stack[top] = cos(stack[top]);
+                    stack[top] = cos(stack[top]);
                 }
                 // Добавьте другие функции по необходимости
                 break;
@@ -413,7 +490,6 @@ double countRPN(Token *head) {
                 break;
         }
         current = current->next;
-        //next = current->next;
     }
 
     if (top != 0) {
@@ -434,7 +510,7 @@ void print_tokens(Token *head) {
 
     Token *current = head;
     printf("Токены:\n");
-    while (current != nullptr) {
+    while (current != NULL) {
         printf("  [%s: %s]\n", type_names[current->type], current->value);
         current = current->next;
     }
@@ -444,7 +520,7 @@ void print_tokens(Token *head) {
 void print_rpn(Token* head) {
     printf("Выражение в ОПЗ: ");
     Token* current = head;
-    while (current != nullptr) {
+    while (current != NULL) {
         printf("%s ", current->value);
         current = current->next;
     }
@@ -457,14 +533,14 @@ int main() {
     SetConsoleOutputCP(1251);
 
     // Тест 1: Унарный минус
-    const char *input1 = "4 + 3";
+    const char *input1 = "10 * -1";
     printf("Входное выражение: %s\n", input1);
 
     Token *tokens1 = lex(input1);
     print_tokens(tokens1);
 
     Token* rpn1 = shuntingYard(tokens1);
-    if (rpn1 != nullptr) {
+    if (rpn1 != NULL) {
         print_rpn(rpn1);
         double a = countRPN(rpn1);
         printf("Результат: %f\n", a);
@@ -475,20 +551,20 @@ int main() {
     printf("\n");
 
     // Тест 2: Функция без аргументов (должна вызвать ошибку)
-    const char *input2 = "2 + 3";
+    const char *input2 = "cos()";
     printf("Входное выражение: %s\n", input2);
 
     Token *tokens2 = lex(input2);
     print_tokens(tokens2);
 
     Token* rpn2 = shuntingYard(tokens2);
-    if (rpn2 != nullptr) {
+    if (rpn2 != NULL) {
         print_rpn(rpn2);
         double a = countRPN(rpn2);
         printf("Результат: %f\n", a);
-        //free_tokens(rpn2);
+        free_tokens(rpn2);
     }
-    //free_tokens(tokens2);
+    free_tokens(tokens2);
 
     return 0;
 }
