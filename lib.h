@@ -24,7 +24,7 @@ typedef enum {
     TOK_COMMA,      // ,
     TOK_FUNCTION,   // функция
     TOK_ASSIGN,     // Оператор присваивания =
-    TON_VEC         // вектор
+    TOK_VECTOR         // вектор
 } TokenT;
 
 
@@ -83,7 +83,13 @@ typedef struct Ident
     Ident *next;
 };
 
+typedef Container* (*MathFunction)(Container* args[], int count);
 
+typedef struct {
+    const char* name;
+    int arg_count;
+    MathFunction func;
+} FunctionDef;
 
 Ident* create_ident(char *name, Token *value);
 void add_ident(Ident **first, Ident *new_ident);
@@ -104,22 +110,38 @@ Container* create_int_container(int value);
 Container* create_float_container(double value);
 Container* create_string_container(const char *value);
 Container* create_vector_container(double x, double y, double z);
+Container* get_container(Token* token);
 
 void free_container(Container *container);
 void print_container(Container *container);
 Container* container_deep_copy(Container *src);
 int container_compare(Container *a, Container *b);
+double container_to_double(Container* container);
 
 void add_token(Token **head, Token **tail, Token *token);
 void free_token(Token *token);
 void free_tokens(Token *head);
 void token_set_container(Token *token, Container *container);
 
+Token *create_token_with_container(TokenT type, const char *value, Container *container);
 Token *create_token(TokenT type, const char *value);
 Token *create_number_token(const char *value);
 Token *create_string_token(TokenT type, const char *value);
 Token *create_vector_token(double x, double y, double z);
 Token *copy_token(const Token *src);
 void print_token(const Token *token);
+
+void push_to_stack(Token** stack_top, Token* item);
+Token* pop_from_stack(Token** stack_top);
+
+void enqueue(Token** queue_front, Token** queue_rear, Token* item);
+Token* dequeue(Token** queue_front, Token** queue_rear) ;
+
+
+Container* sin_func(Container** args, int arg_count);
+Container* cos_func(Container** args, int arg_count);
+Container* log_func(Container** args, int arg_count);
+Container* pow_func(Container** args, int arg_count);
+Container* max_func(Container** args, int arg_count);
 
 #endif // LIB_H_INCLUDED

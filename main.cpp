@@ -1,84 +1,82 @@
-
 #include "lib.h"
 
 
-Ident* FirstIdent;
-
-
-// Функции для работы со стеком
-void push_to_stack(Token** stack_top, Token* item) {
-    if (stack_top == nullptr || item == nullptr) return;
-
-    item->prev = nullptr;
-    item->next = *stack_top;
-
-    if (*stack_top != nullptr) {
-        (*stack_top)->prev = item;
-    }
-
-    *stack_top = item;
-}
-
-Token* pop_from_stack(Token** stack_top) {
-    if (stack_top == nullptr || *stack_top == nullptr) {
-        return nullptr;
-    }
-
-    Token* popped = *stack_top;
-    *stack_top = (*stack_top)->next;
-
-    if (*stack_top != nullptr) {
-        (*stack_top)->prev = nullptr;
-    }
-
-    popped->next = nullptr;
-    popped->prev = nullptr;
-    return popped;
-}
-
-// Функции для работы с очередью
-void enqueue(Token** queue_front, Token** queue_rear, Token* item) {
-    if (item == nullptr) return;
-
-    item->next = nullptr;
-    item->prev = *queue_rear;
-
-    if (*queue_rear != nullptr) {
-        (*queue_rear)->next = item;
-    }
-
-    *queue_rear = item;
-
-    if (*queue_front == nullptr) {
-        *queue_front = item;
-    }
-}
-
-Token* dequeue(Token** queue_front, Token** queue_rear) {
-    if (queue_front == nullptr || *queue_front == nullptr) {
-        return nullptr;
-    }
-
-    Token* dequeued = *queue_front;
-    *queue_front = (*queue_front)->next;
-
-    if (*queue_front != nullptr) {
-        (*queue_front)->prev = nullptr;
-    } else {
-        *queue_rear = nullptr;
-    }
-
-    dequeued->next = nullptr;
-    dequeued->prev = nullptr;
-    return dequeued;
-}
-
 // Глобальные переменные для позиции в исходном коде
+
 static const char *src;
 static int pos = 0;
 
+Ident* FirstIdent;
+
+FunctionDef functions[7] = {
+    {"sin", 1, sin_func},
+    {"cos", 1, cos_func},
+    {"log", 1, log_func},
+    {"pow", 2, pow_func},
+    {"max", 2, max_func},
+    {NULL, 0, NULL}
+};
+
+FunctionDef* find_function(const char* name) {
+    for (FunctionDef* f = functions; f->name; f++) {
+        if (strcmp(f->name, name) == 0) return f;
+    }
+    return NULL;
+}
+
+int stack_size(Token* stack_top)
+{
+    int count = 0;
+    for (Token* current = stack_top; current != nullptr; current = current->next) {
+        count++;
+    }
+    return count;
+}
+
+Container** extract_args_safely(Token** stack, int arg_count, const char* func_name) {
+    if (stack_size(*stack) < arg_count) {
+        printf("Недостаточно аргументов для %s (нужно %d)\n", func_name, arg_count);
+        return NULL;
+    }
+
+    Container** args = (Container**)malloc(arg_count * sizeof(Container*));
+    if (!args) return NULL;
+
+    for (int i = arg_count - 1; i >= 0; i--) {
+        Token* token = pop_from_stack(stack);
+        if (!token) {
+            // Освобождаем уже извлеченные контейнеры
+            for (int j = arg_count - 1; j > i; j--) {
+                free_container(args[j]);
+            }
+            free(args);
+            return NULL;
+        }
+        args[i] = get_container(token);
+        free_token(token);
+    }
+
+    return args;
+}
 
 
+Container* get_container(Token* token)
+{
+    if(token->type == TOK_IDENT)
+    {
+        Ident* existing = find_ident(FirstIdent, token->value);
+        if (existing) {
+            // Обновляем существующий идентификатор
+            return existing->value->container;
+        } else {
+            return NULL;
+        }
+    }
+    else
+    {
+        return token->container;
+    }
+}
 
 // Функция для пропуска пробельных символов
 void skip_whitespace() {
@@ -157,7 +155,7 @@ Token *lex(const char *input) {
         // Числа
         if (isdigit((unsigned char)current)) {
             char *number = read_number();
-            Token *token = create_token(TOK_NUMBER, number);
+            Token *token = create_number_token(number);
             add_token(&head, &tail, token);
             last_token = token;
             free(number);
@@ -199,15 +197,10 @@ Token *lex(const char *input) {
             case '*': token = create_token(TOK_MULTIPLY, "*"); break;
             case '/': token = create_token(TOK_DIVIDE, "/"); break;
             case '(': token = create_token(TOK_LPAREN, "("); break;
-            case ']':
             case ')': token = create_token(TOK_RPAREN, ")"); break;
             case '=': token = create_token(TOK_ASSIGN, "="); break;
-            case '[':
-                token = create_token(TOK_FUNCTION, "vec");
-                add_token(&head, &tail, token);
-                token = create_token(TOK_LPAREN, "(");
-                break;
-            //case ']': token = create_token(TOK_RBRACKET, "]"); break;
+            case '[': token = create_token(TOK_LBRACKET, "[");break;
+            case ']': token = create_token(TOK_RBRACKET, "]"); break;
             case ',': token = create_token(TOK_COMMA, ","); break;
             default:
                 printf("Неизвестный символ: %c\n", current);
@@ -245,25 +238,119 @@ int get_priority(TokenT type) {
     }
 }
 
-// Алгоритм сортировочной станции (Shunting Yard)
-Token* shuntingYard(Token *head) {
-    if (head == nullptr) return nullptr;
+void process_comma(Token** stack_top, Token** output_front, Token** output_rear) {
+    // Выталкиваем операторы из стека до тех пор,
+    // пока не встретим левую круглую или квадратную скобку
+    while (*stack_top) {
+        Token* top = *stack_top;
 
-    Token *output_front = nullptr;
-    Token *output_rear = nullptr;
-    Token *stack_top = nullptr;
+        // Останавливаемся на открывающих скобках
+        if (top->type == TOK_LPAREN || top->type == TOK_LBRACKET) {
+            break;
+        }
 
-    Token *current = head;
+        // Выталкиваем оператор в выходную очередь
+        Token* op = pop_from_stack(stack_top);
+        enqueue(output_front, output_rear, op);
+    }
 
-    while (current != nullptr && current->type != TOK_EOF) {
+    // Проверяем, что запятая находится внутри скобок
+    if (!*stack_top ||
+        ((*stack_top)->type != TOK_LPAREN && (*stack_top)->type != TOK_LBRACKET)) {
+        printf("Ошибка: запятая находится вне скобок\n");
+        return;
+    }
+}
+
+void process_parenthesis(Token** stack_top, Token** output_front, Token** output_rear) {
+    // Выталкиваем все операторы до открывающей круглой скобки
+    while (*stack_top && (*stack_top)->type != TOK_LPAREN) {
+        Token* op = pop_from_stack(stack_top);
+        enqueue(output_front, output_rear, op);
+    }
+
+    // Проверяем, что нашли открывающую скобку
+    if (!*stack_top) {
+        printf("Ошибка: несогласованные круглые скобки\n");
+        return;
+    }
+
+    // Удаляем открывающую круглую скобку из стека
+    Token* bracket = pop_from_stack(stack_top);
+    free_token(bracket);
+
+    // Если на вершине стека находится функция, перемещаем ее в выходную очередь
+    if (*stack_top && (*stack_top)->type == TOK_FUNCTION) {
+        Token* func = pop_from_stack(stack_top);
+        enqueue(output_front, output_rear, func);
+    }
+}
+
+void process_vector_end(Token** stack_top, Token** output_front, Token** output_rear) {
+    // Выталкиваем все операторы до открывающей квадратной скобки
+    while (*stack_top && (*stack_top)->type != TOK_LBRACKET) {
+        Token* op = pop_from_stack(stack_top);
+        enqueue(output_front, output_rear, op);
+    }
+
+    // Проверяем, что нашли открывающую скобку
+    if (!*stack_top) {
+        printf("Ошибка: несогласованные квадратные скобки\n");
+        return;
+    }
+
+    // Удаляем открывающую квадратную скобку из стека
+    Token* bracket = pop_from_stack(stack_top);
+    free_token(bracket);
+
+    // Добавляем специальный оператор VECTOR в выходную очередь
+    // Этот оператор будет обработан при вычислении RPN
+    Token* vector_op = create_token(TOK_VECTOR, "VECTOR");
+    enqueue(output_front, output_rear, vector_op);
+}
+
+Token* shuntingYard(Token* tokens) {
+    Token* output_front = NULL;
+    Token* output_rear = NULL;
+    Token* stack_top = NULL;
+
+    Token* current = tokens;
+    while (current && current->type != TOK_EOF) {
         switch (current->type) {
             case TOK_NUMBER:
             case TOK_IDENT:
-                enqueue(&output_front, &output_rear, create_token(current->type, current->value));
+                // Числа и идентификаторы сразу в выход
+                enqueue(&output_front, &output_rear, copy_token(current));
                 break;
 
             case TOK_FUNCTION:
-                push_to_stack(&stack_top, create_token(current->type, current->value));
+                // Функции помещаем в стек
+                push_to_stack(&stack_top, copy_token(current));
+                break;
+
+            case TOK_COMMA:
+                // Запятая - разделитель аргументов
+                process_comma(&stack_top, &output_front, &output_rear);
+                break;
+
+            case TOK_LBRACKET:
+                // Открывающая квадратная скобка - в стек
+                push_to_stack(&stack_top, copy_token(current));
+                break;
+
+            case TOK_LPAREN:
+                // Открывающая круглая скобка - в стек
+                push_to_stack(&stack_top, copy_token(current));
+                break;
+
+            case TOK_RBRACKET:
+                // Закрывающая квадратная скобка - обрабатываем вектор
+                process_vector_end(&stack_top, &output_front, &output_rear);
+                break;
+
+            case TOK_RPAREN:
+                // Закрывающая круглая скобка
+                process_parenthesis(&stack_top, &output_front, &output_rear);
                 break;
 
             case TOK_PLUS:
@@ -286,142 +373,432 @@ Token* shuntingYard(Token *head) {
                 }
                 break;
 
-            case TOK_LPAREN:
-                push_to_stack(&stack_top, create_token(current->type, current->value));
-                break;
-
-            case TOK_RPAREN:
-                while (stack_top != nullptr && stack_top->type != TOK_LPAREN) {
-                    Token* op = pop_from_stack(&stack_top);
-                    enqueue(&output_front, &output_rear, op);
-                }
-
-                if (stack_top != nullptr && stack_top->type == TOK_LPAREN) {
-                    Token* temp = pop_from_stack(&stack_top);
-                    free(temp->value);
-                    free(temp);
-                }
-
-                if (stack_top != nullptr && stack_top->type == TOK_FUNCTION) {
-                    Token* func = pop_from_stack(&stack_top);
-                    enqueue(&output_front, &output_rear, func);
-                }
-                break;
-
             default:
-                // Игнорируем другие токены
+                // Пропускаем неизвестные токены
                 break;
         }
-
         current = current->next;
     }
 
-    // Перемещаем все оставшиеся операторы из стека в выходную очередь
-    while (stack_top != nullptr) {
+    // После обработки всех токенов выталкиваем оставшиеся операторы из стека
+    while (stack_top) {
         Token* op = pop_from_stack(&stack_top);
-        enqueue(&output_front, &output_rear, op);
+
+        // Проверяем, что не осталось несогласованных скобок
+        if (op->type == TOK_LPAREN || op->type == TOK_LBRACKET) {
+            printf("Ошибка: несогласованные скобки\n");
+            free_token(op);
+        } else {
+            enqueue(&output_front, &output_rear, op);
+        }
     }
 
     return output_front;
 }
 
-double countRPN(Token *head) {
 
-    Token *stack_top = nullptr;
+// Функции арифметических операций
+Container* container_add(Container* a, Container* b) {
+    if (!a || !b) return NULL;
 
-    double stack[100]; // Стек для чисел
-    int top = -1;      // Вершина стека
+    // Числа
+    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
+        (b->type == CT_INT || b->type == CT_FLOAT)) {
+        double result = container_to_double(a) + container_to_double(b);
+        return create_float_container(result);
+    }
 
-    Token *current = head;
-    Token *next = current->next;
-    while (current != nullptr) {
+    // Векторы
+    if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
+        VectorContainer* va = (VectorContainer*)a->data;
+        VectorContainer* vb = (VectorContainer*)b->data;
+        return create_vector_container(va->x + vb->x, va->y + vb->y, va->z + vb->z);
+    }
+
+    printf("Ошибка: несовместимые типы для сложения\n");
+    return NULL;
+}
+
+// Функции арифметических операций
+Container* container_vector(Container* a, Container* b, Container* c) {
+    if (!a || !b || !c) return NULL;
+
+    // Числа
+    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
+        (b->type == CT_INT || b->type == CT_FLOAT) &&
+        (c->type == CT_INT || c->type == CT_FLOAT)) {
+        return create_vector_container(container_to_double(a), container_to_double(b), container_to_double(c));
+    }
+    printf("Ошибка: несовместимые типы для преобразования в вектор\n");
+    return NULL;
+}
+
+
+Container* container_sub(Container* a, Container* b) {
+    if (!a || !b) return NULL;
+
+    // Числа
+    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
+        (b->type == CT_INT || b->type == CT_FLOAT)) {
+        double result = container_to_double(a) - container_to_double(b);
+        return create_float_container(result);
+    }
+
+    // Векторы
+    if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
+        VectorContainer* va = (VectorContainer*)a->data;
+        VectorContainer* vb = (VectorContainer*)b->data;
+        return create_vector_container(va->x - vb->x, va->y - vb->y, va->z - vb->z);
+    }
+
+    printf("Ошибка: несовместимые типы для вычитания\n");
+    return NULL;
+}
+
+Container* container_mul(Container* a, Container* b) {
+    if (!a || !b) return NULL;
+
+    // Числа
+    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
+        (b->type == CT_INT || b->type == CT_FLOAT)) {
+        double result = container_to_double(a) * container_to_double(b);
+        return create_float_container(result);
+    }
+
+    // Вектор * число
+    if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
+        VectorContainer* va = (VectorContainer*)a->data;
+        double scalar = container_to_double(b);
+        return create_vector_container(va->x * scalar, va->y * scalar, va->z * scalar);
+    }
+
+    // Число * вектор
+    if ((a->type == CT_INT || a->type == CT_FLOAT) && b->type == CT_VECTOR) {
+        double scalar = container_to_double(a);
+        VectorContainer* vb = (VectorContainer*)b->data;
+        return create_vector_container(scalar * vb->x, scalar * vb->y, scalar * vb->z);
+    }
+
+    if (a->type == CT_VECTOR && b->type == CT_VECTOR)
+    {
+        VectorContainer* va = (VectorContainer*)a->data;
+        VectorContainer* vb = (VectorContainer*)b->data;
+        return create_float_container(va->x * vb->x + va->y * vb->y + va->z * vb->z);
+    }
+
+    printf("Ошибка: несовместимые типы для умножения\n");
+    return NULL;
+}
+
+Container* container_div(Container* a, Container* b) {
+    if (!a || !b) return NULL;
+
+    // Числа
+    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
+        (b->type == CT_INT || b->type == CT_FLOAT)) {
+        double divisor = container_to_double(b);
+        if (divisor == 0.0) {
+            printf("Ошибка: деление на ноль\n");
+            return NULL;
+        }
+        double result = container_to_double(a) / divisor;
+        return create_float_container(result);
+    }
+
+    // Вектор / число
+    if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
+        double divisor = container_to_double(b);
+        if (divisor == 0.0) {
+            printf("Ошибка: деление на ноль\n");
+            return NULL;
+        }
+        VectorContainer* va = (VectorContainer*)a->data;
+        return create_vector_container(va->x / divisor, va->y / divisor, va->z / divisor);
+    }
+
+    printf("Ошибка: несовместимые типы для деления\n");
+    return NULL;
+}
+
+Container* container_neg(Container* a) {
+    if (!a) return NULL;
+
+    switch (a->type) {
+        case CT_INT: {
+            IntContainer* ic = (IntContainer*)a->data;
+            return create_int_container(-ic->value);
+        }
+        case CT_FLOAT: {
+            FloatContainer* fc = (FloatContainer*)a->data;
+            return create_float_container(-fc->value);
+        }
+        case CT_VECTOR: {
+            VectorContainer* vc = (VectorContainer*)a->data;
+            return create_vector_container(-vc->x, -vc->y, -vc->z);
+        }
+        default:
+            printf("Ошибка: унарный минус не применим к данному типу\n");
+            return NULL;
+    }
+}
+
+Container* apply_function(const char* func_name, Container* arg) {
+    if (!func_name || !arg) return NULL;
+
+    // Проверяем, что аргумент - число
+    if (arg->type != CT_INT && arg->type != CT_FLOAT) {
+        printf("Ошибка: функция %s применяется только к числам\n", func_name);
+        return NULL;
+    }
+
+    double value = container_to_double(arg);
+    double result = 0.0;
+
+    if (strcmp(func_name, "sin") == 0) {
+        result = sin(value);
+    } else if (strcmp(func_name, "cos") == 0) {
+        result = cos(value);
+    } else if (strcmp(func_name, "tan") == 0) {
+        result = tan(value);
+    } else if (strcmp(func_name, "sqrt") == 0) {
+        if (value < 0) {
+            printf("Ошибка: квадратный корень из отрицательного числа\n");
+            return NULL;
+        }
+        result = sqrt(value);
+    } else if (strcmp(func_name, "exp") == 0) {
+        result = exp(value);
+    } else if (strcmp(func_name, "log") == 0) {
+        if (value <= 0) {
+            printf("Ошибка: логарифм неположительного числа\n");
+            return NULL;
+        }
+        result = log(value);
+    } else {
+        printf("Неизвестная функция: %s\n", func_name);
+        return NULL;
+    }
+
+    return create_float_container(result);
+}
+
+Container* countRPN(Token *head)
+{
+    Token* stack_top = NULL;
+    Token* current = head;
+
+    while (current != NULL) {
+
         switch (current->type) {
-            case TOK_NUMBER: {
-                // Преобразуем строку в число и помещаем в стек
-                double num = atof(current->value);
+            case TOK_VECTOR:{
+                Token* c = pop_from_stack(&stack_top);
+                Token* b = pop_from_stack(&stack_top);
+                Token* a = pop_from_stack(&stack_top);
+                Container* result = container_vector(get_container(a), get_container(b), get_container(c));
+                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
+                push_to_stack(&stack_top, result_token);
+                free_token(a);
+                free_token(b);
+                free_token(c);
+                break;
+            }
+            case TOK_NUMBER:
+            case TOK_IDENT:
 
-                //push_to_stack(&stack_top, current);
+                // Копируем токен и помещаем в стек
+                push_to_stack(&stack_top, copy_token(current));
+                break;
 
-                stack[++top] = num;
+            case TOK_PLUS: {
+                if (!stack_top || !stack_top->next) {
+                    printf("Ошибка: недостаточно операндов для +\n");
+                    return NULL;
+                }
+                Token* b = pop_from_stack(&stack_top);
+                Token* a = pop_from_stack(&stack_top);
+                Container* result = container_add(get_container(a), get_container(b));
+                if (!result) {
+                    free_token(a);
+                    free_token(b);
+                    return NULL;
+                }
+                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
+                push_to_stack(&stack_top, result_token);
+                free_token(a);
+                free_token(b);
+
                 break;
             }
 
-            case TOK_PLUS:
-                if (top < 1) {
-                    printf("Ошибка: недостаточно операндов для +\n");
-                    return 0;
-                }
-                stack[top - 1] = stack[top - 1] + stack[top];
-                top--;
-                break;
-
-            case TOK_MINUS:
-                if (top < 1) {
+            case TOK_MINUS: {
+                if (!stack_top || !stack_top->next) {
                     printf("Ошибка: недостаточно операндов для -\n");
-                    return 0;
+                    return NULL;
                 }
-                stack[top - 1] = stack[top - 1] - stack[top];
-                top--;
+                Token* b = pop_from_stack(&stack_top);
+                Token* a = pop_from_stack(&stack_top);
+                Container* result = container_sub(get_container(a), get_container(b));
+                if (!result) {
+                    free_token(a);
+                    free_token(b);
+                    return NULL;
+                }
+                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
+                push_to_stack(&stack_top, result_token);
+                free_token(a);
+                free_token(b);
                 break;
+            }
 
-            case TOK_MULTIPLY:
-                if (top < 1) {
+            case TOK_MULTIPLY: {
+                if (!stack_top || !stack_top->next) {
                     printf("Ошибка: недостаточно операндов для *\n");
-                    return 0;
+                    return NULL;
                 }
-                stack[top - 1] = stack[top - 1] * stack[top];
-                top--;
+                Token* b = pop_from_stack(&stack_top);
+                Token* a = pop_from_stack(&stack_top);
+                Container* result = container_mul(get_container(a), get_container(b));
+                if (!result) {
+                    free_token(a);
+                    free_token(b);
+                    return NULL;
+                }
+                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
+                push_to_stack(&stack_top, result_token);
+                free_token(a);
+                free_token(b);
                 break;
+            }
 
-            case TOK_DIVIDE:
-                if (top < 1) {
+            case TOK_DIVIDE: {
+                if (!stack_top || !stack_top->next) {
                     printf("Ошибка: недостаточно операндов для /\n");
-                    return 0;
+                    return NULL;
                 }
-                if (stack[top] == 0) {
-                    printf("Ошибка: деление на ноль\n");
-                    return 0;
+                Token* b = pop_from_stack(&stack_top);
+                Token* a = pop_from_stack(&stack_top);
+                Container* result = container_div(get_container(a), get_container(b));
+                if (!result) {
+                    free_token(a);
+                    free_token(b);
+                    return NULL;
                 }
-                stack[top - 1] = stack[top - 1] / stack[top];
-                top--;
+                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
+                push_to_stack(&stack_top, result_token);
+                free_token(a);
+                free_token(b);
                 break;
+            }
 
-            case TOK_UMINUS:
-                if (top < 0) {
+            case TOK_UMINUS: {
+                if (!stack_top) {
                     printf("Ошибка: недостаточно операндов для унарного минуса\n");
-                    return 0;
+                    return NULL;
                 }
-                stack[top] = -stack[top];
+                Token* a = pop_from_stack(&stack_top);
+                Container* result = container_neg(get_container(a));
+                if (!result) {
+                    free_token(a);
+                    //return NULL;
+                }
+                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
+                push_to_stack(&stack_top, result_token);
+                free_token(a);
                 break;
-            case TOK_ASSIGN:
-                break;
+            }
 
-            case TOK_FUNCTION:
-                // Проверяем количество аргументов для функций
-                if (strcmp(current->value, "cos") == 0) {
-                    if (top < 0) {
-                        printf("Ошибка: функция cos требует один аргумент\n");
-                        return 0;
-                    }
-                    //stack[top] = cos(stack[top]);
+            case TOK_FUNCTION: {
+            FunctionDef* func_def = find_function(current->value);
+            if (!func_def) {
+                printf("Неизвестная функция: %s\n", current->value);
+                return NULL;
+            }
+
+            Container** args = extract_args_safely(&stack_top, func_def->arg_count, current->value);
+            if (!args) return NULL;
+
+            Container* result = func_def->func(args, func_def->arg_count);
+            free(args); // Только массив указателей
+
+            if (!result) {
+                printf("Ошибка в функции %s\n", current->value);
+                return NULL;
+            }
+
+            push_to_stack(&stack_top, create_token_with_container(TOK_NUMBER, NULL, result));
+            break;
+            }
+
+            case TOK_ASSIGN: {
+                // Обработка присваивания (a = 5)
+                if (!stack_top || !stack_top->next) {
+                    printf("Ошибка: недостаточно операндов для =\n");
+                    return NULL;
                 }
-                // Добавьте другие функции по необходимости
+                Token* value = pop_from_stack(&stack_top);
+                Token* ident = pop_from_stack(&stack_top);
+
+                if (ident->type != TOK_IDENT) {
+                    printf("Ошибка: слева от = должен быть идентификатор\n");
+                    free_token(ident);
+                    free_token(value);
+                    return NULL;
+                }
+
+                // Сохраняем значение в таблице идентификаторов
+                Ident* existing = find_ident(FirstIdent, ident->value);
+                if (existing) {
+                    // Обновляем существующий идентификатор
+                    free_token(existing->value);
+                    existing->value = copy_token(value);
+                } else {
+                    // Создаем новый идентификатор
+                    Ident* new_ident = create_ident(ident->value, copy_token(value));
+                    add_ident(&FirstIdent, new_ident);
+                }
+
+                // Результат присваивания - значение
+                push_to_stack(&stack_top, copy_token(value));
+                free_token(ident);
+                free_token(value);
                 break;
+            }
 
             default:
-                // Игнорируем другие токены
+                printf("Неизвестный токен в RPN: %d\n", current->type);
                 break;
         }
         current = current->next;
-        //next = current->next;
     }
 
-    if (top != 0) {
-        printf("Ошибка: в стеке осталось %d элементов\n", top + 1);
-        return 0;
+    // Проверяем, что в стеке остался ровно один элемент
+    if (!stack_top) {
+        printf("Ошибка: пустой стек\n");
+        return NULL;
     }
 
-    return stack[0];
+    if (stack_top->next) {
+        printf("Ошибка: в стеке осталось несколько элементов\n");
+        // Очищаем стек
+        while (stack_top) {
+            Token* temp = pop_from_stack(&stack_top);
+            free_token(temp);
+        }
+        return NULL;
+    }
+
+    // Извлекаем результат
+    Token* result_token = pop_from_stack(&stack_top);
+
+    //print_container(result_token->container);
+    //print_float_container(result_token->container->data);
+    Container* result = NULL;
+    if (result_token) {
+        result = container_deep_copy(get_container(result_token));
+    }
+    free_token(result_token);
+
+    return result;
 }
 
 // Функция для печати списка токенов
@@ -451,44 +828,68 @@ void print_rpn(Token* head) {
     printf("\n");
 }
 
-// Пример использования
+
 int main() {
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
 
-    // Тест 1: Унарный минус
-    const char *input1 = "4 + 3";
-    printf("Входное выражение: %s\n", input1);
+    char input[256];
+    Container* result;
 
-    Token *tokens1 = lex(input1);
-    print_tokens(tokens1);
+    printf("Калькулятор запущен. Для выхода введите 'exit'.\n\n");
 
-    Token* rpn1 = shuntingYard(tokens1);
-    if (rpn1 != nullptr) {
-        print_rpn(rpn1);
-        double a = countRPN(rpn1);
-        printf("Результат: %f\n", a);
-        free_tokens(rpn1);
+    while (1) {
+        printf(">> ");
+
+        // Считываем ввод пользователя
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            break;
+        }
+
+        // Удаляем символ новой строки
+        input[strcspn(input, "\n")] = 0;
+
+        // Проверяем на выход
+        if (strcmp(input, "exit") == 0) {
+            printf("Выход из калькулятора.\n");
+            break;
+        }
+
+        // Пропускаем пустые строки
+        if (strlen(input) == 0) {
+            continue;
+        }
+
+        //printf("Входное выражение: %s\n", input);
+
+        // Лексический анализ
+        Token *tokens = lex(input);
+        if (tokens == nullptr) {
+            printf("Ошибка лексического анализа\n\n");
+            continue;
+        }
+
+        print_tokens(tokens);
+
+        // Синтаксический анализ и преобразование в ОПН
+        Token* rpn = shuntingYard(tokens);
+        if (rpn != nullptr) {
+            print_rpn(rpn);
+
+            // Вычисление результата
+            result = countRPN(rpn);
+            //printf("Результат: %f\n\n", result);
+            printf("<< ");
+            print_container(result);
+            printf("\n");
+
+            free_tokens(rpn);
+        } else {
+            printf("Ошибка синтаксического анализа\n\n");
+        }
+
+        free_tokens(tokens);
     }
-    free_tokens(tokens1);
-
-    printf("\n");
-
-    // Тест 2: Функция без аргументов (должна вызвать ошибку)
-    const char *input2 = "2 + 3";
-    printf("Входное выражение: %s\n", input2);
-
-    Token *tokens2 = lex(input2);
-    print_tokens(tokens2);
-
-    Token* rpn2 = shuntingYard(tokens2);
-    if (rpn2 != nullptr) {
-        print_rpn(rpn2);
-        double a = countRPN(rpn2);
-        printf("Результат: %f\n", a);
-        //free_tokens(rpn2);
-    }
-    //free_tokens(tokens2);
 
     return 0;
 }

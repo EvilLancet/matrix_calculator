@@ -1,9 +1,12 @@
 #include "lib.h"
 
+// ------------ функции для работы функций --------------------
+
+
 // ------------ функции для работы с переменными --------------
 
-
-Ident* create_ident(char *name, Token *value) {
+Ident* create_ident(char *name, Token *value)
+{
     Ident *new_ident = (Ident*)malloc(sizeof(Ident));
     if (!new_ident) return nullptr;
 
@@ -371,7 +374,7 @@ Token *create_string_token(TokenT type, const char *value) {
 
 // Функция для создания токена вектора
 Token *create_vector_token(double x, double y, double z) {
-    Token *token = create_token(TON_VEC, NULL); // или специальный тип для вектора
+    Token *token = create_token(TOK_VECTOR, NULL); // или специальный тип для вектора
     if (token) {
         token->container = create_vector_container(x, y, z);
     }
@@ -406,4 +409,148 @@ void print_token(const Token *token) {
 
     printf("}\n");
 }
+
+// ------------ функции для работы со стеком --------------
+
+void push_to_stack(Token** stack_top, Token* item)
+{
+    if (stack_top == nullptr || item == nullptr) return;
+
+    item->prev = nullptr;
+    item->next = *stack_top;
+
+    if (*stack_top != nullptr) {
+        (*stack_top)->prev = item;
+    }
+
+    *stack_top = item;
+}
+
+Token* pop_from_stack(Token** stack_top)
+{
+    if (stack_top == nullptr || *stack_top == nullptr) {
+        return nullptr;
+    }
+
+    Token* popped = *stack_top;
+    *stack_top = (*stack_top)->next;
+
+    if (*stack_top != nullptr) {
+        (*stack_top)->prev = nullptr;
+    }
+
+    popped->next = nullptr;
+    popped->prev = nullptr;
+    return popped;
+}
+
+// ------------ функции для работы с очередью --------------
+
+
+void enqueue(Token** queue_front, Token** queue_rear, Token* item)
+{
+    if (item == nullptr) return;
+
+    item->next = nullptr;
+    item->prev = *queue_rear;
+
+    if (*queue_rear != nullptr) {
+        (*queue_rear)->next = item;
+    }
+
+    *queue_rear = item;
+
+    if (*queue_front == nullptr) {
+        *queue_front = item;
+    }
+}
+
+Token* dequeue(Token** queue_front, Token** queue_rear)
+{
+    if (queue_front == nullptr || *queue_front == nullptr) {
+        return nullptr;
+    }
+
+    Token* dequeued = *queue_front;
+    *queue_front = (*queue_front)->next;
+
+    if (*queue_front != nullptr) {
+        (*queue_front)->prev = nullptr;
+    } else {
+        *queue_rear = nullptr;
+    }
+
+    dequeued->next = nullptr;
+    dequeued->prev = nullptr;
+    return dequeued;
+}
+
+// ------------ вспомогательные функции --------------
+
+
+// Функция преобразования контейнера в double
+double container_to_double(Container* container) {
+    if (!container) return 0.0;
+
+    switch (container->type) {
+        case CT_INT: {
+            IntContainer* ic = (IntContainer*)container->data;
+            return (double)ic->value;
+        }
+        case CT_FLOAT: {
+            FloatContainer* fc = (FloatContainer*)container->data;
+            return fc->value;
+        }
+        default:
+            return 0.0;
+    }
+}
+
+
+Container* sin_func(Container** args, int arg_count) {
+
+    double value = container_to_double(args[0]);
+    return create_float_container(sin(value));
+}
+
+Container* cos_func(Container** args, int arg_count) {
+
+    double value = container_to_double(args[0]);
+    return create_float_container(cos(value));
+}
+
+Container* log_func(Container** args, int arg_count) {
+
+    double value = container_to_double(args[0]);
+    if (value <= 0) {
+        printf("log: аргумент должен быть положительным\n");
+        free_container(args[0]);
+        return NULL;
+    }
+    return create_float_container(log(value));
+}
+
+Container* pow_func(Container** args, int arg_count) {
+    // Валидация двух аргументов
+
+
+    double base = container_to_double(args[0]);
+    double exponent = container_to_double(args[1]);
+
+    // Проверка особых случаев
+    if (base == 0 && exponent < 0) {
+        printf("pow: деление на ноль\n");
+        free_container(args[0]);
+        free_container(args[1]);
+        return NULL;
+    }
+    return create_float_container(pow(base, exponent));
+}
+
+Container* max_func(Container* args[], int count) {
+    double a = container_to_double(args[0]);
+    double b = container_to_double(args[1]);
+    return create_float_container(a > b ? a : b);
+}
+
 

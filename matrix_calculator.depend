@@ -12,7 +12,7 @@
 
 1759502468 source:f:\marinelogbook\matrix_calculator\tokenizer.cpp
 
-1762527981 source:f:\marinelogbook\matrix_calculator\main.cpp
+1762545165 source:f:\marinelogbook\matrix_calculator\main.cpp
 	"lib.h"
 
 1759502301 f:\marinelogbook\matrix_calculator\tokenizer.h
@@ -37,10 +37,10 @@
 	<string.h>
 	<ctype.h>
 
-1762528018 source:f:\marinelogbook\matrix_calculator\lib.cpp
+1762534112 source:f:\marinelogbook\matrix_calculator\lib.cpp
 	"lib.h"
 
-1762527848 f:\marinelogbook\matrix_calculator\lib.h
+1762544904 f:\marinelogbook\matrix_calculator\lib.h
 	<windows.h>
 	<stdio.h>
 	<stdlib.h>
