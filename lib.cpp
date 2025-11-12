@@ -352,9 +352,11 @@ Token *create_number_token(const char *value) {
         // Проверяем, содержит ли строка точку (дробное число)
         if (strchr(value, '.') != NULL) {
             double float_value = atof(value);
+            //printf("%f \n", float_value);
             token->container = create_float_container(float_value);
         } else {
             int int_value = atoi(value);
+            //printf("%d \n", int_value);
             token->container = create_int_container(int_value);
         }
     }
@@ -509,48 +511,157 @@ double container_to_double(Container* container) {
 
 Container* sin_func(Container** args, int arg_count) {
 
-    double value = container_to_double(args[0]);
-    return create_float_container(sin(value));
+    if (!args[0]) return NULL;
+    if (args[0]->type == CT_INT || args[0]->type == CT_FLOAT)
+    {
+        double value = container_to_double(args[0]);
+        return create_float_container(sin(value));
+    }
+    return NULL;
 }
 
 Container* cos_func(Container** args, int arg_count) {
+    if (arg_count != 1) {
+        printf("cos: ожидается 1 аргумент\n");
+        return NULL;
+    }
+    if (!args[0]) return NULL;
+    if (args[0]->type != CT_INT && args[0]->type != CT_FLOAT) {
+        printf("cos: аргумент должен быть числом\n");
+        return NULL;
+    }
 
     double value = container_to_double(args[0]);
     return create_float_container(cos(value));
 }
 
 Container* log_func(Container** args, int arg_count) {
+    if (arg_count != 1) {
+        printf("log: ожидается 1 аргумент\n");
+        return NULL;
+    }
+    if (!args[0]) return NULL;
+    if (args[0]->type != CT_INT && args[0]->type != CT_FLOAT) {
+        printf("log: аргумент должен быть числом\n");
+        return NULL;
+    }
 
     double value = container_to_double(args[0]);
     if (value <= 0) {
         printf("log: аргумент должен быть положительным\n");
-        free_container(args[0]);
         return NULL;
     }
     return create_float_container(log(value));
 }
 
 Container* pow_func(Container** args, int arg_count) {
-    // Валидация двух аргументов
-
+    if (arg_count != 2) {
+        printf("pow: ожидается 2 аргумента\n");
+        return NULL;
+    }
+    if (!args[0] || !args[1]) return NULL;
+    if ((args[0]->type != CT_INT && args[0]->type != CT_FLOAT) ||
+        (args[1]->type != CT_INT && args[1]->type != CT_FLOAT)) {
+        printf("pow: аргументы должны быть числами\n");
+        return NULL;
+    }
 
     double base = container_to_double(args[0]);
     double exponent = container_to_double(args[1]);
 
-    // Проверка особых случаев
     if (base == 0 && exponent < 0) {
         printf("pow: деление на ноль\n");
-        free_container(args[0]);
-        free_container(args[1]);
         return NULL;
     }
     return create_float_container(pow(base, exponent));
 }
 
-Container* max_func(Container* args[], int count) {
+Container* max_func(Container* args[], int arg_count) {
+    if (arg_count != 2) {
+        printf("max: ожидается 2 аргумента\n");
+        return NULL;
+    }
+    if (!args[0] || !args[1]) return NULL;
+    if ((args[0]->type != CT_INT && args[0]->type != CT_FLOAT) ||
+        (args[1]->type != CT_INT && args[1]->type != CT_FLOAT)) {
+        printf("max: аргументы должны быть числами\n");
+        return NULL;
+    }
+
     double a = container_to_double(args[0]);
     double b = container_to_double(args[1]);
     return create_float_container(a > b ? a : b);
 }
 
+Container* cross_func(Container** args, int arg_count) {
+    if (arg_count != 2) {
+        printf("cross: ожидается 2 аргумента\n");
+        return NULL;
+    }
+    if (!args[0] || !args[1]) return NULL;
+    if (args[0]->type != CT_VECTOR || args[1]->type != CT_VECTOR) {
+        printf("cross: оба аргумента должны быть векторами\n");
+        return NULL;
+    }
 
+    VectorContainer* v1 = (VectorContainer*)args[0]->data;
+    VectorContainer* v2 = (VectorContainer*)args[1]->data;
+
+    // Вычисление векторного произведения
+    double x = v1->y * v2->z - v1->z * v2->y;
+    double y = v1->z * v2->x - v1->x * v2->z;
+    double z = v1->x * v2->y - v1->y * v2->x;
+
+    return create_vector_container(x,y,z);
+}
+
+Container* abs_func(Container** args, int arg_count)
+{
+    if (arg_count != 1) {
+        printf("length: ожидается 1 аргумент\n");
+        return NULL;
+    }
+    if (!args[0]) return NULL;
+    if (args[0]->type != CT_VECTOR) {
+        printf("length: аргумент должен быть вектором\n");
+        return NULL;
+    }
+
+    VectorContainer* vec = (VectorContainer*)args[0]->data;
+
+    // Вычисление длины вектора
+    double length = sqrt(vec->x * vec->x + vec->y * vec->y + vec->z * vec->z);
+    return create_float_container(length);
+}
+
+Container* sub_func(Container** args, int arg_count)
+{
+    if (arg_count != 2) {
+        printf("Вычитание: ожидается 2 аргумента\n");
+        return NULL;
+    }
+    if (!args[0] || !args[1]) {
+        printf("Вычитание: аргументы не могут быть NULL\n");
+        return NULL;
+    }
+
+    Container* a = args[0];
+    Container* b = args[1];
+
+    // Числа
+    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
+        (b->type == CT_INT || b->type == CT_FLOAT)) {
+        double result = container_to_double(a) - container_to_double(b);
+        return create_float_container(result);
+    }
+
+    // Векторы
+    if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
+        VectorContainer* va = (VectorContainer*)a->data;
+        VectorContainer* vb = (VectorContainer*)b->data;
+        return create_vector_container(va->x - vb->x, va->y - vb->y, va->z - vb->z);
+    }
+
+    printf("Ошибка: несовместимые типы для вычитания\n");
+    return NULL;
+}

@@ -8,13 +8,16 @@ static int pos = 0;
 
 Ident* FirstIdent;
 
-FunctionDef functions[7] = {
-    {"sin", 1, sin_func},
-    {"cos", 1, cos_func},
-    {"log", 1, log_func},
-    {"pow", 2, pow_func},
-    {"max", 2, max_func},
-    {NULL, 0, NULL}
+FunctionDef functions[10] = {
+    {"sin",   1, sin_func  },
+    {"cos",   1, cos_func  },
+    {"log",   1, log_func  },
+    {"pow",   2, pow_func  },
+    {"max",   2, max_func  },
+    {"cross", 2, cross_func},
+    {"abs" ,  1, abs_func  },
+    {"-",     2, sub_func  },
+    {NULL,    0, NULL}
 };
 
 FunctionDef* find_function(const char* name) {
@@ -630,7 +633,8 @@ Container* countRPN(Token *head)
                 break;
             }
 
-            case TOK_MINUS: {
+            case -TOK_MINUS: //TOK_MINUS
+            {
                 if (!stack_top || !stack_top->next) {
                     printf("Ошибка: недостаточно операндов для -\n");
                     return NULL;
@@ -706,7 +710,7 @@ Container* countRPN(Token *head)
                 free_token(a);
                 break;
             }
-
+            case TOK_MINUS:
             case TOK_FUNCTION: {
             FunctionDef* func_def = find_function(current->value);
             if (!func_def) {
@@ -718,7 +722,7 @@ Container* countRPN(Token *head)
             if (!args) return NULL;
 
             Container* result = func_def->func(args, func_def->arg_count);
-            free(args); // Только массив указателей
+            free(args);
 
             if (!result) {
                 printf("Ошибка в функции %s\n", current->value);
@@ -828,23 +832,144 @@ void print_rpn(Token* head) {
     printf("\n");
 }
 
+char *screenshot_bu = "screen.bu";
+char *screenshot = "screen.txt";
+
+char *program_bu = "program.bu";
+char *program = "program.txt";
+
+
+void copy_file(const char* source, const char* destination) {
+    FILE* src = fopen(source, "r");
+    if (src == NULL) {
+        printf("Ошибка: не удалось открыть файл %s\n", source);
+        return;
+    }
+
+    FILE* dst = fopen(destination, "w");
+    if (dst == NULL) {
+        printf("Ошибка: не удалось создать файл %s\n", destination);
+        fclose(src);
+        return;
+    }
+
+    char buffer[1024];
+    size_t bytes;
+    while ((bytes = fread(buffer, 1, sizeof(buffer), src)) > 0) {
+        fwrite(buffer, 1, bytes, dst);
+    }
+
+    fclose(src);
+    fclose(dst);
+    printf("Файл успешно скопирован: %s -> %s\n", source, destination);
+}
+
+// Функция для выполнения команд из файла program.txt
+void execute_from_program_txt(FILE* program_file, FILE* screenshot_file) {
+    FILE* input_file = fopen("program.txt", "r");
+    if (input_file == NULL) {
+        printf("Ошибка: не удалось открыть файл program.txt\n");
+        return;
+    }
+
+    char line[256];
+    Container* result;
+
+    printf("Выполнение команд из program.txt...\n");
+    fprintf(screenshot_file, "Выполнение команд из program.txt...\n");
+
+    while (fgets(line, sizeof(line), input_file) != NULL) {
+        // Удаляем символ новой строки
+        line[strcspn(line, "\n")] = 0;
+
+        if (strlen(line) == 0) continue;
+
+        // Пропускаем команды save/screen/open при выполнении из файла
+        if (strcmp(line, "save") == 0 || strcmp(line, "screen") == 0 ||
+            strcmp(line, "open") == 0 || strcmp(line, "exit") == 0) {
+            printf(">> %s\n", line);
+            fprintf(screenshot_file, ">> %s\n", line);
+            printf("<< Команда пропущена при выполнении из файла\n");
+            fprintf(screenshot_file, "<< Команда пропущена при выполнении из файла\n");
+            continue;
+        }
+
+        // Выводим команду в консоль и screenshot
+        printf(">> %s\n", line);
+        fprintf(screenshot_file, ">> %s\n", line);
+
+        // Обрабатываем команду как математическое выражение
+        Token *tokens = lex(line);
+        if (tokens == nullptr) {
+            printf("Ошибка лексического анализа\n\n");
+            fprintf(screenshot_file, "Ошибка лексического анализа\n\n");
+            continue;
+        }
+
+        Token* rpn = shuntingYard(tokens);
+        if (rpn != nullptr) {
+            // Вычисление результата
+            result = countRPN(rpn);
+            printf("<< ");
+            fprintf(screenshot_file, "<< ");
+
+            // Вывод результата
+            print_container(result);
+            printf("\n");
+            fprintf(screenshot_file, "\n");
+
+            // Записываем команду в program_bu файл
+            fprintf(program_file, "%s\n", line);
+
+            free_tokens(rpn);
+        } else {
+            printf("Ошибка синтаксического анализа\n\n");
+            fprintf(screenshot_file, "Ошибка синтаксического анализа\n\n");
+        }
+
+        free_tokens(tokens);
+    }
+
+    fclose(input_file);
+    printf("Выполнение команд из program.txt завершено.\n");
+    fprintf(screenshot_file, "Выполнение команд из program.txt завершено.\n");
+}
+
 
 int main() {
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
 
+    FILE* screenshot = fopen(screenshot_bu, "w");
+    FILE* program = fopen(program_bu, "w");
+
     char input[256];
     Container* result;
 
-    printf("Калькулятор запущен. Для выхода введите 'exit'.\n\n");
+    printf("Калькулятор запущен. Для выхода введите 'exit'.\n");
+    printf("Доступные команды:\n");
+    printf("  save   - сохранить program в program.txt\n");
+    printf("  screen - сохранить screenshot в screenshot.txt\n");
+    printf("  open   - выполнить команды из program\n\n");
+
+    // Записываем начальное сообщение в screenshot
+    fprintf(screenshot, "Калькулятор запущен. Для выхода введите 'exit'.\n");
+    fprintf(screenshot, "Доступные команды:\n");
+    fprintf(screenshot, "  save   - сохранить program в program.txt\n");
+    fprintf(screenshot, "  screen - сохранить screenshot в screenshot.txt\n");
+    fprintf(screenshot, "  open   - выполнить команды из program\n\n");
 
     while (1) {
         printf(">> ");
+        fprintf(screenshot, ">> ");
 
         // Считываем ввод пользователя
         if (fgets(input, sizeof(input), stdin) == NULL) {
             break;
         }
+
+        // Записываем ввод в screenshot
+        fprintf(screenshot, "%s", input);
 
         // Удаляем символ новой строки
         input[strcspn(input, "\n")] = 0;
@@ -852,7 +977,27 @@ int main() {
         // Проверяем на выход
         if (strcmp(input, "exit") == 0) {
             printf("Выход из калькулятора.\n");
+            fprintf(screenshot, "Выход из калькулятора.\n");
             break;
+        }
+
+        // Обработка команды save
+        if (strcmp(input, "save") == 0) {
+            copy_file(program_bu, "program.txt");
+            continue;
+        }
+
+        // Обработка команды screen
+        if (strcmp(input, "screen") == 0) {
+            fflush(screenshot);
+            copy_file(screenshot_bu, "screenshot.txt");
+            continue;
+        }
+
+        // Обработка команды open
+        if (strcmp(input, "open") == 0) {
+            execute_from_program_txt(program, screenshot);
+            continue;
         }
 
         // Пропускаем пустые строки
@@ -860,36 +1005,43 @@ int main() {
             continue;
         }
 
-        //printf("Входное выражение: %s\n", input);
-
+        // Здесь ваш существующий код обработки выражений
         // Лексический анализ
         Token *tokens = lex(input);
         if (tokens == nullptr) {
             printf("Ошибка лексического анализа\n\n");
+            fprintf(screenshot, "Ошибка лексического анализа\n\n");
             continue;
         }
-
-        print_tokens(tokens);
 
         // Синтаксический анализ и преобразование в ОПН
         Token* rpn = shuntingYard(tokens);
         if (rpn != nullptr) {
-            print_rpn(rpn);
-
             // Вычисление результата
             result = countRPN(rpn);
-            //printf("Результат: %f\n\n", result);
             printf("<< ");
-            print_container(result);
-            printf("\n");
+            fprintf(screenshot, "<< ");
 
+            // Вывод результата
+            print_container(result);
+            fputc('\n', stdout);
+            //print_container(result);
+            fputc('\n', screenshot);
+
+            // Записываем входное выражение в program файл
+            fprintf(program, "%s\n", input);
+            fflush(program);
             free_tokens(rpn);
         } else {
             printf("Ошибка синтаксического анализа\n\n");
+            fprintf(screenshot, "Ошибка синтаксического анализа\n\n");
         }
 
         free_tokens(tokens);
     }
+
+    fclose(screenshot);
+    fclose(program);
 
     return 0;
 }

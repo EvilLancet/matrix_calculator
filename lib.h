@@ -143,5 +143,8 @@ Container* cos_func(Container** args, int arg_count);
 Container* log_func(Container** args, int arg_count);
 Container* pow_func(Container** args, int arg_count);
 Container* max_func(Container** args, int arg_count);
+Container* abs_func(Container** args, int arg_count);
+Container* cross_func(Container** args, int arg_count);
+Container* sub_func(Container** args, int arg_count);
 
 #endif // LIB_H_INCLUDED

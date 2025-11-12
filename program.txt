@@ -1,0 +1,19 @@
+a = [0,0,1]
+a
+b = [0,1,0]
+cross(a,b)
+c = a * a * a + b
+a = [0, 1, 1]
+b = -a
+a + b
+sin(1)
+c=
+c=1
+c
+a * b
+a + b
+a - b
+c = 2
+a / c
+a * c
+a = [sin(c)+2 , 2, 3]
