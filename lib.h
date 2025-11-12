@@ -146,5 +146,8 @@ Container* max_func(Container** args, int arg_count);
 Container* abs_func(Container** args, int arg_count);
 Container* cross_func(Container** args, int arg_count);
 Container* sub_func(Container** args, int arg_count);
-
+Container* add_func(Container** args, int arg_count);
+Container* neg_func(Container** args, int arg_count);
+Container* div_func(Container** args, int arg_count);
+Container* mul_func(Container** args, int arg_count);
 #endif // LIB_H_INCLUDED

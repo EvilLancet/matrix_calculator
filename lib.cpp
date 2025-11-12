@@ -665,3 +665,151 @@ Container* sub_func(Container** args, int arg_count)
     printf("Ошибка: несовместимые типы для вычитания\n");
     return NULL;
 }
+
+Container* add_func(Container** args, int arg_count) {
+    if (arg_count != 2) {
+        printf("Сложение: ожидается 2 аргумента\n");
+        return NULL;
+    }
+    if (!args[0] || !args[1]) {
+        printf("Сложение: аргументы не могут быть NULL\n");
+        return NULL;
+    }
+
+    Container* a = args[0];
+    Container* b = args[1];
+
+    // Числа
+    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
+        (b->type == CT_INT || b->type == CT_FLOAT)) {
+        double result = container_to_double(a) + container_to_double(b);
+        return create_float_container(result);
+    }
+
+    // Векторы
+    if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
+        VectorContainer* va = (VectorContainer*)a->data;
+        VectorContainer* vb = (VectorContainer*)b->data;
+        return create_vector_container(va->x + vb->x, va->y + vb->y, va->z + vb->z);
+    }
+
+    printf("Ошибка: несовместимые типы для сложения\n");
+    return NULL;
+}
+
+
+Container* neg_func(Container** args, int arg_count) {
+    if (arg_count != 1) {
+        printf("Унарный минус: ожидается 1 аргумент\n");
+        return NULL;
+    }
+    if (!args[0]) {
+        printf("Унарный минус: аргумент не может быть NULL\n");
+        return NULL;
+    }
+
+    Container* a = args[0];
+
+    switch (a->type) {
+        case CT_INT: {
+            IntContainer* ic = (IntContainer*)a->data;
+            return create_int_container(-ic->value);
+        }
+        case CT_FLOAT: {
+            FloatContainer* fc = (FloatContainer*)a->data;
+            return create_float_container(-fc->value);
+        }
+        case CT_VECTOR: {
+            VectorContainer* vc = (VectorContainer*)a->data;
+            return create_vector_container(-vc->x, -vc->y, -vc->z);
+        }
+        default:
+            printf("Ошибка: унарный минус не применим к данному типу\n");
+            return NULL;
+    }
+}
+
+Container* div_func(Container** args, int arg_count) {
+    if (arg_count != 2) {
+        printf("Деление: ожидается 2 аргумента\n");
+        return NULL;
+    }
+    if (!args[0] || !args[1]) {
+        printf("Деление: аргументы не могут быть NULL\n");
+        return NULL;
+    }
+
+    Container* a = args[0];
+    Container* b = args[1];
+
+    // Числа
+    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
+        (b->type == CT_INT || b->type == CT_FLOAT)) {
+        double divisor = container_to_double(b);
+        if (divisor == 0.0) {
+            printf("Ошибка: деление на ноль\n");
+            return NULL;
+        }
+        double result = container_to_double(a) / divisor;
+        return create_float_container(result);
+    }
+
+    // Вектор / число
+    if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
+        double divisor = container_to_double(b);
+        if (divisor == 0.0) {
+            printf("Ошибка: деление на ноль\n");
+            return NULL;
+        }
+        VectorContainer* va = (VectorContainer*)a->data;
+        return create_vector_container(va->x / divisor, va->y / divisor, va->z / divisor);
+    }
+
+    printf("Ошибка: несовместимые типы для деления\n");
+    return NULL;
+}
+
+Container* mul_func(Container** args, int arg_count) {
+    if (arg_count != 2) {
+        printf("Умножение: ожидается 2 аргумента\n");
+        return NULL;
+    }
+    if (!args[0] || !args[1]) {
+        printf("Умножение: аргументы не могут быть NULL\n");
+        return NULL;
+    }
+
+    Container* a = args[0];
+    Container* b = args[1];
+
+    // Числа
+    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
+        (b->type == CT_INT || b->type == CT_FLOAT)) {
+        double result = container_to_double(a) * container_to_double(b);
+        return create_float_container(result);
+    }
+
+    // Вектор * число
+    if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
+        VectorContainer* va = (VectorContainer*)a->data;
+        double scalar = container_to_double(b);
+        return create_vector_container(va->x * scalar, va->y * scalar, va->z * scalar);
+    }
+
+    // Число * вектор
+    if ((a->type == CT_INT || a->type == CT_FLOAT) && b->type == CT_VECTOR) {
+        double scalar = container_to_double(a);
+        VectorContainer* vb = (VectorContainer*)b->data;
+        return create_vector_container(scalar * vb->x, scalar * vb->y, scalar * vb->z);
+    }
+
+    // Скалярное произведение векторов
+    if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
+        VectorContainer* va = (VectorContainer*)a->data;
+        VectorContainer* vb = (VectorContainer*)b->data;
+        return create_float_container(va->x * vb->x + va->y * vb->y + va->z * vb->z);
+    }
+
+    printf("Ошибка: несовместимые типы для умножения\n");
+    return NULL;
+}

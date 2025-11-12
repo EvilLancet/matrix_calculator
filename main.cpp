@@ -8,7 +8,7 @@ static int pos = 0;
 
 Ident* FirstIdent;
 
-FunctionDef functions[10] = {
+FunctionDef functions[14] = {
     {"sin",   1, sin_func  },
     {"cos",   1, cos_func  },
     {"log",   1, log_func  },
@@ -17,6 +17,10 @@ FunctionDef functions[10] = {
     {"cross", 2, cross_func},
     {"abs" ,  1, abs_func  },
     {"-",     2, sub_func  },
+    {"+",     2, add_func  },
+    {"u-",    1, neg_func  },
+    {"/",     2, div_func  },
+    {"*",     2, mul_func  },
     {NULL,    0, NULL}
 };
 
@@ -192,7 +196,7 @@ Token *lex(const char *input) {
             case '-':
                 // Проверяем, является ли минус унарным
                 if (is_unary_minus(last_token)) {
-                    token = create_token(TOK_UMINUS, "-");
+                    token = create_token(TOK_UMINUS, "u-");
                 } else {
                     token = create_token(TOK_MINUS, "-");
                 }
@@ -400,27 +404,7 @@ Token* shuntingYard(Token* tokens) {
 }
 
 
-// Функции арифметических операций
-Container* container_add(Container* a, Container* b) {
-    if (!a || !b) return NULL;
 
-    // Числа
-    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
-        (b->type == CT_INT || b->type == CT_FLOAT)) {
-        double result = container_to_double(a) + container_to_double(b);
-        return create_float_container(result);
-    }
-
-    // Векторы
-    if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
-        VectorContainer* va = (VectorContainer*)a->data;
-        VectorContainer* vb = (VectorContainer*)b->data;
-        return create_vector_container(va->x + vb->x, va->y + vb->y, va->z + vb->z);
-    }
-
-    printf("Ошибка: несовместимые типы для сложения\n");
-    return NULL;
-}
 
 // Функции арифметических операций
 Container* container_vector(Container* a, Container* b, Container* c) {
@@ -434,115 +418,6 @@ Container* container_vector(Container* a, Container* b, Container* c) {
     }
     printf("Ошибка: несовместимые типы для преобразования в вектор\n");
     return NULL;
-}
-
-
-Container* container_sub(Container* a, Container* b) {
-    if (!a || !b) return NULL;
-
-    // Числа
-    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
-        (b->type == CT_INT || b->type == CT_FLOAT)) {
-        double result = container_to_double(a) - container_to_double(b);
-        return create_float_container(result);
-    }
-
-    // Векторы
-    if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
-        VectorContainer* va = (VectorContainer*)a->data;
-        VectorContainer* vb = (VectorContainer*)b->data;
-        return create_vector_container(va->x - vb->x, va->y - vb->y, va->z - vb->z);
-    }
-
-    printf("Ошибка: несовместимые типы для вычитания\n");
-    return NULL;
-}
-
-Container* container_mul(Container* a, Container* b) {
-    if (!a || !b) return NULL;
-
-    // Числа
-    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
-        (b->type == CT_INT || b->type == CT_FLOAT)) {
-        double result = container_to_double(a) * container_to_double(b);
-        return create_float_container(result);
-    }
-
-    // Вектор * число
-    if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
-        VectorContainer* va = (VectorContainer*)a->data;
-        double scalar = container_to_double(b);
-        return create_vector_container(va->x * scalar, va->y * scalar, va->z * scalar);
-    }
-
-    // Число * вектор
-    if ((a->type == CT_INT || a->type == CT_FLOAT) && b->type == CT_VECTOR) {
-        double scalar = container_to_double(a);
-        VectorContainer* vb = (VectorContainer*)b->data;
-        return create_vector_container(scalar * vb->x, scalar * vb->y, scalar * vb->z);
-    }
-
-    if (a->type == CT_VECTOR && b->type == CT_VECTOR)
-    {
-        VectorContainer* va = (VectorContainer*)a->data;
-        VectorContainer* vb = (VectorContainer*)b->data;
-        return create_float_container(va->x * vb->x + va->y * vb->y + va->z * vb->z);
-    }
-
-    printf("Ошибка: несовместимые типы для умножения\n");
-    return NULL;
-}
-
-Container* container_div(Container* a, Container* b) {
-    if (!a || !b) return NULL;
-
-    // Числа
-    if ((a->type == CT_INT || a->type == CT_FLOAT) &&
-        (b->type == CT_INT || b->type == CT_FLOAT)) {
-        double divisor = container_to_double(b);
-        if (divisor == 0.0) {
-            printf("Ошибка: деление на ноль\n");
-            return NULL;
-        }
-        double result = container_to_double(a) / divisor;
-        return create_float_container(result);
-    }
-
-    // Вектор / число
-    if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
-        double divisor = container_to_double(b);
-        if (divisor == 0.0) {
-            printf("Ошибка: деление на ноль\n");
-            return NULL;
-        }
-        VectorContainer* va = (VectorContainer*)a->data;
-        return create_vector_container(va->x / divisor, va->y / divisor, va->z / divisor);
-    }
-
-    printf("Ошибка: несовместимые типы для деления\n");
-    return NULL;
-}
-
-Container* container_neg(Container* a) {
-    if (!a) return NULL;
-
-    switch (a->type) {
-        case CT_INT: {
-            IntContainer* ic = (IntContainer*)a->data;
-            return create_int_container(-ic->value);
-        }
-        case CT_FLOAT: {
-            FloatContainer* fc = (FloatContainer*)a->data;
-            return create_float_container(-fc->value);
-        }
-        case CT_VECTOR: {
-            VectorContainer* vc = (VectorContainer*)a->data;
-            return create_vector_container(-vc->x, -vc->y, -vc->z);
-        }
-        default:
-            printf("Ошибка: унарный минус не применим к данному типу\n");
-            return NULL;
-    }
 }
 
 Container* apply_function(const char* func_name, Container* arg) {
@@ -612,104 +487,10 @@ Container* countRPN(Token *head)
                 push_to_stack(&stack_top, copy_token(current));
                 break;
 
-            case TOK_PLUS: {
-                if (!stack_top || !stack_top->next) {
-                    printf("Ошибка: недостаточно операндов для +\n");
-                    return NULL;
-                }
-                Token* b = pop_from_stack(&stack_top);
-                Token* a = pop_from_stack(&stack_top);
-                Container* result = container_add(get_container(a), get_container(b));
-                if (!result) {
-                    free_token(a);
-                    free_token(b);
-                    return NULL;
-                }
-                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
-                push_to_stack(&stack_top, result_token);
-                free_token(a);
-                free_token(b);
-
-                break;
-            }
-
-            case -TOK_MINUS: //TOK_MINUS
-            {
-                if (!stack_top || !stack_top->next) {
-                    printf("Ошибка: недостаточно операндов для -\n");
-                    return NULL;
-                }
-                Token* b = pop_from_stack(&stack_top);
-                Token* a = pop_from_stack(&stack_top);
-                Container* result = container_sub(get_container(a), get_container(b));
-                if (!result) {
-                    free_token(a);
-                    free_token(b);
-                    return NULL;
-                }
-                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
-                push_to_stack(&stack_top, result_token);
-                free_token(a);
-                free_token(b);
-                break;
-            }
-
-            case TOK_MULTIPLY: {
-                if (!stack_top || !stack_top->next) {
-                    printf("Ошибка: недостаточно операндов для *\n");
-                    return NULL;
-                }
-                Token* b = pop_from_stack(&stack_top);
-                Token* a = pop_from_stack(&stack_top);
-                Container* result = container_mul(get_container(a), get_container(b));
-                if (!result) {
-                    free_token(a);
-                    free_token(b);
-                    return NULL;
-                }
-                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
-                push_to_stack(&stack_top, result_token);
-                free_token(a);
-                free_token(b);
-                break;
-            }
-
-            case TOK_DIVIDE: {
-                if (!stack_top || !stack_top->next) {
-                    printf("Ошибка: недостаточно операндов для /\n");
-                    return NULL;
-                }
-                Token* b = pop_from_stack(&stack_top);
-                Token* a = pop_from_stack(&stack_top);
-                Container* result = container_div(get_container(a), get_container(b));
-                if (!result) {
-                    free_token(a);
-                    free_token(b);
-                    return NULL;
-                }
-                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
-                push_to_stack(&stack_top, result_token);
-                free_token(a);
-                free_token(b);
-                break;
-            }
-
-            case TOK_UMINUS: {
-                if (!stack_top) {
-                    printf("Ошибка: недостаточно операндов для унарного минуса\n");
-                    return NULL;
-                }
-                Token* a = pop_from_stack(&stack_top);
-                Container* result = container_neg(get_container(a));
-                if (!result) {
-                    free_token(a);
-                    //return NULL;
-                }
-                Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
-                push_to_stack(&stack_top, result_token);
-                free_token(a);
-                break;
-            }
+            case TOK_MULTIPLY:
+            case TOK_DIVIDE:
+            case TOK_UMINUS:
+            case TOK_PLUS:
             case TOK_MINUS:
             case TOK_FUNCTION: {
             FunctionDef* func_def = find_function(current->value);
@@ -794,8 +575,6 @@ Container* countRPN(Token *head)
     // Извлекаем результат
     Token* result_token = pop_from_stack(&stack_top);
 
-    //print_container(result_token->container);
-    //print_float_container(result_token->container->data);
     Container* result = NULL;
     if (result_token) {
         result = container_deep_copy(get_container(result_token));
