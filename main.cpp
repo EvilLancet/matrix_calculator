@@ -3,9 +3,6 @@
 
 // Глобальные переменные для позиции в исходном коде
 
-static const char *src;
-static int pos = 0;
-
 Ident* FirstIdent;
 
 FunctionDef functions[14] = {
@@ -85,147 +82,7 @@ Container* get_container(Token* token)
     }
 }
 
-// Функция для пропуска пробельных символов
-void skip_whitespace() {
-    while (src[pos] != '\0' && isspace((unsigned char)src[pos])) {
-        pos++;
-    }
-}
 
-// Функция для чтения числа
-char *read_number() {
-    int start = pos;
-    while (isdigit((unsigned char)src[pos]) || src[pos] == '.') {
-        pos++;
-    }
-    int length = pos - start;
-    char *number = (char*)malloc(length + 1);
-    strncpy(number, &src[start], length);
-    number[length] = '\0';
-    return number;
-}
-
-// Функция для чтения идентификатора
-char *read_identifier() {
-    int start = pos;
-    while (isalnum((unsigned char)src[pos]) || src[pos] == '_') {
-        pos++;
-    }
-    int length = pos - start;
-    char *ident = (char*)malloc(length + 1);
-    strncpy(ident, &src[start], length);
-    ident[length] = '\0';
-    return ident;
-}
-
-// Функция для определения унарного минуса
-int is_unary_minus(Token *last_token) {
-    // Унарный минус, если:
-    // 1. Это первый токен
-    // 2. После оператора (+, -, *, /, =)
-    // 3. После открывающей скобки
-    if (last_token == nullptr) {
-        return 1;
-    }
-
-    switch (last_token->type) {
-        case TOK_PLUS:
-        case TOK_MINUS:
-        case TOK_MULTIPLY:
-        case TOK_DIVIDE:
-        case TOK_ASSIGN:
-        case TOK_LPAREN:
-        case TOK_LBRACKET:
-        case TOK_COMMA:
-            return 1;
-        default:
-            return 0;
-    }
-}
-
-// Основная функция лексического анализа
-Token *lex(const char *input) {
-    src = input;
-    pos = 0;
-
-    Token *head = nullptr;
-    Token *tail = nullptr;
-    Token *last_token = nullptr;
-
-    while (src[pos] != '\0') {
-        skip_whitespace();
-
-        char current = src[pos];
-
-        if (current == '\0') break;
-
-        // Числа
-        if (isdigit((unsigned char)current)) {
-            char *number = read_number();
-            Token *token = create_number_token(number);
-            add_token(&head, &tail, token);
-            last_token = token;
-            free(number);
-            continue;
-        }
-
-        // Идентификаторы и функции
-        if (isalpha((unsigned char)current) || current == '_') {
-            char *ident = read_identifier();
-
-            // Проверяем, является ли идентификатор функцией
-            int is_func = 0;
-            int next_pos = pos;
-            skip_whitespace();
-            if (src[pos] == '(') {
-                is_func = 1;
-            }
-            pos = next_pos; // Возвращаем позицию
-
-            Token *token = create_token(is_func ? TOK_FUNCTION : TOK_IDENT, ident);
-            add_token(&head, &tail, token);
-            last_token = token;
-            free(ident);
-            continue;
-        }
-
-        // Операторы, скобки и новые символы
-        Token *token = nullptr;
-        switch (current) {
-            case '+': token = create_token(TOK_PLUS, "+"); break;
-            case '-':
-                // Проверяем, является ли минус унарным
-                if (is_unary_minus(last_token)) {
-                    token = create_token(TOK_UMINUS, "u-");
-                } else {
-                    token = create_token(TOK_MINUS, "-");
-                }
-                break;
-            case '*': token = create_token(TOK_MULTIPLY, "*"); break;
-            case '/': token = create_token(TOK_DIVIDE, "/"); break;
-            case '(': token = create_token(TOK_LPAREN, "("); break;
-            case ')': token = create_token(TOK_RPAREN, ")"); break;
-            case '=': token = create_token(TOK_ASSIGN, "="); break;
-            case '[': token = create_token(TOK_LBRACKET, "[");break;
-            case ']': token = create_token(TOK_RBRACKET, "]"); break;
-            case ',': token = create_token(TOK_COMMA, ","); break;
-            default:
-                printf("Неизвестный символ: %c\n", current);
-                pos++;
-                continue;
-        }
-
-        add_token(&head, &tail, token);
-        last_token = token;
-        pos++;
-    }
-
-    // Добавляем токен конца файла
-    Token *eof = create_token(TOK_EOF, "EOF");
-    add_token(&head, &tail, eof);
-
-    return head;
-}
 
 // Функция для получения приоритета оператора
 int get_priority(TokenT type) {
@@ -420,45 +277,6 @@ Container* container_vector(Container* a, Container* b, Container* c) {
     return NULL;
 }
 
-Container* apply_function(const char* func_name, Container* arg) {
-    if (!func_name || !arg) return NULL;
-
-    // Проверяем, что аргумент - число
-    if (arg->type != CT_INT && arg->type != CT_FLOAT) {
-        printf("Ошибка: функция %s применяется только к числам\n", func_name);
-        return NULL;
-    }
-
-    double value = container_to_double(arg);
-    double result = 0.0;
-
-    if (strcmp(func_name, "sin") == 0) {
-        result = sin(value);
-    } else if (strcmp(func_name, "cos") == 0) {
-        result = cos(value);
-    } else if (strcmp(func_name, "tan") == 0) {
-        result = tan(value);
-    } else if (strcmp(func_name, "sqrt") == 0) {
-        if (value < 0) {
-            printf("Ошибка: квадратный корень из отрицательного числа\n");
-            return NULL;
-        }
-        result = sqrt(value);
-    } else if (strcmp(func_name, "exp") == 0) {
-        result = exp(value);
-    } else if (strcmp(func_name, "log") == 0) {
-        if (value <= 0) {
-            printf("Ошибка: логарифм неположительного числа\n");
-            return NULL;
-        }
-        result = log(value);
-    } else {
-        printf("Неизвестная функция: %s\n", func_name);
-        return NULL;
-    }
-
-    return create_float_container(result);
-}
 
 Container* countRPN(Token *head)
 {
@@ -714,6 +532,26 @@ void execute_from_program_txt(FILE* program_file, FILE* screenshot_file) {
     fprintf(screenshot_file, "Выполнение команд из program.txt завершено.\n");
 }
 
+void print_help(FILE* screenshot_file) {
+    const char* help_text =
+        "Доступные команды:\n"
+        "  save   - сохранить program в program.txt\n"
+        "  screen - сохранить screenshot в screenshot.txt\n"
+        "  open   - выполнить команды из program.txt\n"
+        "  help   - показать эту справку\n"
+        "  exit   - выход из калькулятора\n"
+        "\n"
+        "Доступные операторы и функции:\n"
+        "  +, -, *, / - арифметические операции\n"
+        "  = - присваивание (например: a = 5)\n"
+        "  sin(x), cos(x), log(x), abs(x) - функции с одним аргументом\n"
+        "  pow(x,y), max(x,y), cross(x,y) - функции с двумя аргументами\n"
+        "  [x, y, z] - создание вектора из трех чисел\n";
+
+    printf("%s", help_text);
+    fprintf(screenshot_file, "%s", help_text);
+}
+
 
 int main() {
     SetConsoleCP(1251);
@@ -725,18 +563,8 @@ int main() {
     char input[256];
     Container* result;
 
-    printf("Калькулятор запущен. Для выхода введите 'exit'.\n");
-    printf("Доступные команды:\n");
-    printf("  save   - сохранить program в program.txt\n");
-    printf("  screen - сохранить screenshot в screenshot.txt\n");
-    printf("  open   - выполнить команды из program\n\n");
-
-    // Записываем начальное сообщение в screenshot
-    fprintf(screenshot, "Калькулятор запущен. Для выхода введите 'exit'.\n");
-    fprintf(screenshot, "Доступные команды:\n");
-    fprintf(screenshot, "  save   - сохранить program в program.txt\n");
-    fprintf(screenshot, "  screen - сохранить screenshot в screenshot.txt\n");
-    fprintf(screenshot, "  open   - выполнить команды из program\n\n");
+    printf("Калькулятор запущен. Для выхода введите 'exit'. Для справки введите 'help'.\n");
+    fprintf(screenshot, "Калькулятор запущен. Для выхода введите 'exit'. Для справки введите 'help'.\n");
 
     while (1) {
         printf(">> ");
@@ -776,6 +604,11 @@ int main() {
         // Обработка команды open
         if (strcmp(input, "open") == 0) {
             execute_from_program_txt(program, screenshot);
+            continue;
+        }
+
+        if (strcmp(input, "help") == 0) {
+            print_help(screenshot);
             continue;
         }
 

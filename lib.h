@@ -91,6 +91,9 @@ typedef struct {
     MathFunction func;
 } FunctionDef;
 
+
+Token *lex(const char *input);
+
 Ident* create_ident(char *name, Token *value);
 void add_ident(Ident **first, Ident *new_ident);
 void remove_ident(Ident **first, Ident *ident_to_remove);
