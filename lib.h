@@ -91,6 +91,11 @@ typedef struct {
     MathFunction func;
 } FunctionDef;
 
+Token* shuntingYard(Token* tokens);
+Container* countRPN(Token *head);
+
+void execute_from_program_txt(FILE* program_file, FILE* screenshot_file);
+void copy_file(const char* source, const char* destination);
 
 Token *lex(const char *input);
 

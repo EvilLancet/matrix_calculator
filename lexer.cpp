@@ -4,14 +4,14 @@ static const char *src;
 static int pos = 0;
 
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РїСЂРѕРїСѓСЃРєР° РїСЂРѕР±РµР»СЊРЅС‹С… СЃРёРјРІРѕР»РѕРІ
+// Функция для пропуска пробельных символов
 void skip_whitespace() {
     while (src[pos] != '\0' && isspace((unsigned char)src[pos])) {
         pos++;
     }
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ С‡С‚РµРЅРёСЏ С‡РёСЃР»Р°
+// Функция для чтения числа
 char *read_number() {
     int start = pos;
     while (isdigit((unsigned char)src[pos]) || src[pos] == '.') {
@@ -24,7 +24,7 @@ char *read_number() {
     return number;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ С‡С‚РµРЅРёСЏ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂР°
+// Функция для чтения идентификатора
 char *read_identifier() {
     int start = pos;
     while (isalnum((unsigned char)src[pos]) || src[pos] == '_') {
@@ -37,12 +37,12 @@ char *read_identifier() {
     return ident;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ СѓРЅР°СЂРЅРѕРіРѕ РјРёРЅСѓСЃР°
+// Функция для определения унарного минуса
 int is_unary_minus(Token *last_token) {
-    // РЈРЅР°СЂРЅС‹Р№ РјРёРЅСѓСЃ, РµСЃР»Рё:
-    // 1. Р­С‚Рѕ РїРµСЂРІС‹Р№ С‚РѕРєРµРЅ
-    // 2. РџРѕСЃР»Рµ РѕРїРµСЂР°С‚РѕСЂР° (+, -, *, /, =)
-    // 3. РџРѕСЃР»Рµ РѕС‚РєСЂС‹РІР°СЋС‰РµР№ СЃРєРѕР±РєРё
+    // Унарный минус, если:
+    // 1. Это первый токен
+    // 2. После оператора (+, -, *, /, =)
+    // 3. После открывающей скобки
     if (last_token == nullptr) {
         return 1;
     }
@@ -62,7 +62,7 @@ int is_unary_minus(Token *last_token) {
     }
 }
 
-// РћСЃРЅРѕРІРЅР°СЏ С„СѓРЅРєС†РёСЏ Р»РµРєСЃРёС‡РµСЃРєРѕРіРѕ Р°РЅР°Р»РёР·Р°
+// Основная функция лексического анализа
 Token *lex(const char *input) {
     src = input;
     pos = 0;
@@ -78,7 +78,7 @@ Token *lex(const char *input) {
 
         if (current == '\0') break;
 
-        // Р§РёСЃР»Р°
+        // Числа
         if (isdigit((unsigned char)current)) {
             char *number = read_number();
             Token *token = create_number_token(number);
@@ -88,18 +88,18 @@ Token *lex(const char *input) {
             continue;
         }
 
-        // РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂС‹ Рё С„СѓРЅРєС†РёРё
+        // Идентификаторы и функции
         if (isalpha((unsigned char)current) || current == '_') {
             char *ident = read_identifier();
 
-            // РџСЂРѕРІРµСЂСЏРµРј, СЏРІР»СЏРµС‚СЃСЏ Р»Рё РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ С„СѓРЅРєС†РёРµР№
+            // Проверяем, является ли идентификатор функцией
             int is_func = 0;
             int next_pos = pos;
             skip_whitespace();
             if (src[pos] == '(') {
                 is_func = 1;
             }
-            pos = next_pos; // Р’РѕР·РІСЂР°С‰Р°РµРј РїРѕР·РёС†РёСЋ
+            pos = next_pos; // Возвращаем позицию
 
             Token *token = create_token(is_func ? TOK_FUNCTION : TOK_IDENT, ident);
             add_token(&head, &tail, token);
@@ -108,12 +108,12 @@ Token *lex(const char *input) {
             continue;
         }
 
-        // РћРїРµСЂР°С‚РѕСЂС‹, СЃРєРѕР±РєРё Рё РЅРѕРІС‹Рµ СЃРёРјРІРѕР»С‹
+        // Операторы, скобки и новые символы
         Token *token = nullptr;
         switch (current) {
             case '+': token = create_token(TOK_PLUS, "+"); break;
             case '-':
-                // РџСЂРѕРІРµСЂСЏРµРј, СЏРІР»СЏРµС‚СЃСЏ Р»Рё РјРёРЅСѓСЃ СѓРЅР°СЂРЅС‹Рј
+                // Проверяем, является ли минус унарным
                 if (is_unary_minus(last_token)) {
                     token = create_token(TOK_UMINUS, "u-");
                 } else {
@@ -129,7 +129,7 @@ Token *lex(const char *input) {
             case ']': token = create_token(TOK_RBRACKET, "]"); break;
             case ',': token = create_token(TOK_COMMA, ","); break;
             default:
-                printf("РќРµРёР·РІРµСЃС‚РЅС‹Р№ СЃРёРјРІРѕР»: %c\n", current);
+                printf("Неизвестный символ: %c\n", current);
                 pos++;
                 continue;
         }
@@ -139,7 +139,7 @@ Token *lex(const char *input) {
         pos++;
     }
 
-    // Р”РѕР±Р°РІР»СЏРµРј С‚РѕРєРµРЅ РєРѕРЅС†Р° С„Р°Р№Р»Р°
+    // Добавляем токен конца файла
     Token *eof = create_token(TOK_EOF, "EOF");
     add_token(&head, &tail, eof);
 

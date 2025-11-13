@@ -1,16 +1,16 @@
 #include "lib.h"
 
-// ------------ С„СѓРЅРєС†РёРё РґР»СЏ СЂР°Р±РѕС‚С‹ С„СѓРЅРєС†РёР№ --------------------
+// ------------ функции для работы функций --------------------
 
 
-// ------------ С„СѓРЅРєС†РёРё РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РїРµСЂРµРјРµРЅРЅС‹РјРё --------------
+// ------------ функции для работы с переменными --------------
 
 Ident* create_ident(char *name, Token *value)
 {
     Ident *new_ident = (Ident*)malloc(sizeof(Ident));
     if (!new_ident) return nullptr;
 
-    new_ident->name = strdup(name); // РљРѕРїРёСЂСѓРµРј СЃС‚СЂРѕРєСѓ
+    new_ident->name = strdup(name); // Копируем строку
     new_ident->value = value;
     new_ident->prev = nullptr;
     new_ident->next = nullptr;
@@ -18,7 +18,7 @@ Ident* create_ident(char *name, Token *value)
     return new_ident;
 }
 
-// Р”РѕР±Р°РІР»РµРЅРёРµ РІ РЅР°С‡Р°Р»Рѕ СЃРїРёСЃРєР°
+// Добавление в начало списка
 void add_ident(Ident **first, Ident *new_ident) {
     if (new_ident == nullptr) return;
 
@@ -31,28 +31,28 @@ void add_ident(Ident **first, Ident *new_ident) {
     *first = new_ident;
 }
 
-// РЈРґР°Р»РµРЅРёРµ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂР° РёР· СЃРїРёСЃРєР°
+// Удаление идентификатора из списка
 void remove_ident(Ident **first, Ident *ident_to_remove) {
     if (!first || !*first || !ident_to_remove) return;
 
-    // Р•СЃР»Рё СѓРґР°Р»СЏРµРјС‹Р№ СЌР»РµРјРµРЅС‚ - РїРµСЂРІС‹Р№
+    // Если удаляемый элемент - первый
     if (*first == ident_to_remove) {
         *first = ident_to_remove->next;
     }
 
-    // РџРµСЂРµСЃС‚СЂР°РёРІР°РµРј СЃРІСЏР·Рё
+    // Перестраиваем связи
     if (ident_to_remove->prev)
         ident_to_remove->prev->next = ident_to_remove->next;
 
     if (ident_to_remove->next)
         ident_to_remove->next->prev = ident_to_remove->prev;
 
-    // РћС‡РёС‰Р°РµРј РїР°РјСЏС‚СЊ
+    // Очищаем память
     free(ident_to_remove->name);
     free(ident_to_remove);
 }
 
-// РџРѕРёСЃРє РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂР° РїРѕ РёРјРµРЅРё
+// Поиск идентификатора по имени
 Ident* find_ident(Ident *first, const char *name) {
     Ident *current = first;
 
@@ -62,13 +62,13 @@ Ident* find_ident(Ident *first, const char *name) {
         current = current->next;
     }
 
-    return nullptr; // РќРµ РЅР°Р№РґРµРЅ
+    return nullptr; // Не найден
 }
 
-// ------------ С„СѓРЅРєС†РёРё РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РєРѕРЅС‚РµР№РЅРµСЂР°РјРё --------------
+// ------------ функции для работы с контейнерами --------------
 
 
-// Р¤СѓРЅРєС†РёРё РѕСЃРІРѕР±РѕР¶РґРµРЅРёСЏ РґР°РЅРЅС‹С… РєРѕРЅС‚РµР№РЅРµСЂРѕРІ
+// Функции освобождения данных контейнеров
 void free_int_container(void *data) {
     if (data) free(data);
 }
@@ -89,7 +89,7 @@ void free_vector_container(void *data) {
     if (data) free(data);
 }
 
-// Р¤СѓРЅРєС†РёРё РїРµС‡Р°С‚Рё РєРѕРЅС‚РµР№РЅРµСЂРѕРІ
+// Функции печати контейнеров
 void print_int_container(void *data) {
     if (data) {
         IntContainer *ic = (IntContainer*)data;
@@ -118,7 +118,7 @@ void print_vector_container(void *data) {
     }
 }
 
-// Р¤СѓРЅРєС†РёРё СЃРѕР·РґР°РЅРёСЏ РєРѕРЅС‚РµР№РЅРµСЂРѕРІ
+// Функции создания контейнеров
 Container* create_int_container(int value) {
     Container *container = (Container*)malloc(sizeof(Container));
     IntContainer *data = (IntContainer*)malloc(sizeof(IntContainer));
@@ -174,7 +174,7 @@ Container* create_vector_container(double x, double y, double z) {
     return container;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РѕСЃРІРѕР±РѕР¶РґРµРЅРёСЏ РєРѕРЅС‚РµР№РЅРµСЂР°
+// Функция для освобождения контейнера
 void free_container(Container *container) {
     if (container) {
         if (container->free_func && container->data) {
@@ -184,14 +184,14 @@ void free_container(Container *container) {
     }
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РїРµС‡Р°С‚Рё РєРѕРЅС‚РµР№РЅРµСЂР°
+// Функция для печати контейнера
 void print_container(Container *container) {
     if (container && container->print_func) {
         container->print_func(container->data);
     }
 }
 
-// Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Рµ СѓС‚РёР»РёС‚С‹ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РєРѕРЅС‚РµР№РЅРµСЂР°РјРё
+// Дополнительные утилиты для работы с контейнерами
 Container* container_deep_copy(Container *src) {
     if (!src) return NULL;
 
@@ -250,21 +250,21 @@ int container_compare(Container *a, Container *b) {
 }
 
 
-// ------------ С„СѓРЅРєС†РёРё РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ С‚РѕРєРµРЅР°РјРё --------------
+// ------------ функции для работы с токенами --------------
 
 
 Token *create_token(TokenT type, const char *value) {
     Token *token = (Token*)malloc(sizeof(Token));
     token->type = type;
     token->value = value ? strdup(value) : NULL;
-    token->container = NULL;  // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РєРѕРЅС‚РµР№РЅРµСЂ РєР°Рє NULL
+    token->container = NULL;  // Инициализируем контейнер как NULL
     token->prev = NULL;
     token->next = NULL;
     return token;
 }
 
 /*
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕРіРѕ С‚РѕРєРµРЅР°
+// Функция для создания нового токена
 Token *create_token(TokenT type, const char *value) {
     Token *token = (Token*)malloc(sizeof(Token));
     token->type = type;
@@ -276,7 +276,7 @@ Token *create_token(TokenT type, const char *value) {
 */
 
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ С‚РѕРєРµРЅР° СЃ РєРѕРЅС‚РµР№РЅРµСЂРѕРј
+// Функция для создания токена с контейнером
 Token *create_token_with_container(TokenT type, const char *value, Container *container) {
     Token *token = create_token(type, value);
     if (token) {
@@ -285,7 +285,7 @@ Token *create_token_with_container(TokenT type, const char *value, Container *co
     return token;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РґРѕР±Р°РІР»РµРЅРёСЏ С‚РѕРєРµРЅР° РІ РєРѕРЅРµС† СЃРїРёСЃРєР°
+// Функция для добавления токена в конец списка
 void add_token(Token **head, Token **tail, Token *token) {
     if (token == NULL) return;
 
@@ -299,16 +299,16 @@ void add_token(Token **head, Token **tail, Token *token) {
     }
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РѕСЃРІРѕР±РѕР¶РґРµРЅРёСЏ РїР°РјСЏС‚Рё РѕРґРЅРѕРіРѕ С‚РѕРєРµРЅР°
+// Функция для освобождения памяти одного токена
 void free_token(Token *token) {
     if (token == NULL) return;
 
-    // РћСЃРІРѕР±РѕР¶РґР°РµРј Р·РЅР°С‡РµРЅРёРµ СЃС‚СЂРѕРєРё
+    // Освобождаем значение строки
     if (token->value) {
         free(token->value);
     }
 
-    // РћСЃРІРѕР±РѕР¶РґР°РµРј РєРѕРЅС‚РµР№РЅРµСЂ, РµСЃР»Рё РѕРЅ РµСЃС‚СЊ
+    // Освобождаем контейнер, если он есть
     if (token->container) {
         free_container(token->container);
     }
@@ -316,7 +316,7 @@ void free_token(Token *token) {
     free(token);
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РѕСЃРІРѕР±РѕР¶РґРµРЅРёСЏ РїР°РјСЏС‚Рё РІСЃРµРіРѕ СЃРїРёСЃРєР° С‚РѕРєРµРЅРѕРІ
+// Функция для освобождения памяти всего списка токенов
 void free_tokens(Token *head) {
     Token *current = head;
     while (current != NULL) {
@@ -326,11 +326,11 @@ void free_tokens(Token *head) {
     }
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ СѓСЃС‚Р°РЅРѕРІРєРё РєРѕРЅС‚РµР№РЅРµСЂР° РІ С‚РѕРєРµРЅ
+// Функция для установки контейнера в токен
 void token_set_container(Token *token, Container *container) {
     if (token == NULL) return;
 
-    // РћСЃРІРѕР±РѕР¶РґР°РµРј СЃС‚Р°СЂС‹Р№ РєРѕРЅС‚РµР№РЅРµСЂ, РµСЃР»Рё РѕРЅ Р±С‹Р»
+    // Освобождаем старый контейнер, если он был
     if (token->container) {
         free_container(token->container);
     }
@@ -338,18 +338,18 @@ void token_set_container(Token *token, Container *container) {
     token->container = container;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РєРѕРЅС‚РµР№РЅРµСЂР° РёР· С‚РѕРєРµРЅР°
+// Функция для получения контейнера из токена
 Container *token_get_container(const Token *token) {
     return token ? token->container : NULL;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ С‚РѕРєРµРЅР° С‡РёСЃР»Р° (Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РѕРїСЂРµРґРµР»СЏРµС‚ int/float)
+// Функция для создания токена числа (автоматически определяет int/float)
 Token *create_number_token(const char *value) {
     if (value == NULL) return NULL;
 
     Token *token = create_token(TOK_NUMBER, value);
     if (token) {
-        // РџСЂРѕРІРµСЂСЏРµРј, СЃРѕРґРµСЂР¶РёС‚ Р»Рё СЃС‚СЂРѕРєР° С‚РѕС‡РєСѓ (РґСЂРѕР±РЅРѕРµ С‡РёСЃР»Рѕ)
+        // Проверяем, содержит ли строка точку (дробное число)
         if (strchr(value, '.') != NULL) {
             double float_value = atof(value);
             //printf("%f \n", float_value);
@@ -363,7 +363,7 @@ Token *create_number_token(const char *value) {
     return token;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ С‚РѕРєРµРЅР° СЃС‚СЂРѕРєРё
+// Функция для создания токена строки
 Token *create_string_token(TokenT type, const char *value) {
     if (value == NULL) return NULL;
 
@@ -374,16 +374,16 @@ Token *create_string_token(TokenT type, const char *value) {
     return token;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ С‚РѕРєРµРЅР° РІРµРєС‚РѕСЂР°
+// Функция для создания токена вектора
 Token *create_vector_token(double x, double y, double z) {
-    Token *token = create_token(TOK_VECTOR, NULL); // РёР»Рё СЃРїРµС†РёР°Р»СЊРЅС‹Р№ С‚РёРї РґР»СЏ РІРµРєС‚РѕСЂР°
+    Token *token = create_token(TOK_VECTOR, NULL); // или специальный тип для вектора
     if (token) {
         token->container = create_vector_container(x, y, z);
     }
     return token;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РєРѕРїРёСЂРѕРІР°РЅРёСЏ С‚РѕРєРµРЅР° (РіР»СѓР±РѕРєР°СЏ РєРѕРїРёСЏ)
+// Функция для копирования токена (глубокая копия)
 Token *copy_token(const Token *src) {
     if (src == NULL) return NULL;
 
@@ -394,7 +394,7 @@ Token *copy_token(const Token *src) {
     return copy;
 }
 
-// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РїРµС‡Р°С‚Рё С‚РѕРєРµРЅР° (РґР»СЏ РѕС‚Р»Р°РґРєРё)
+// Функция для печати токена (для отладки)
 void print_token(const Token *token) {
     if (token == NULL) {
         printf("NULL_TOKEN");
@@ -412,7 +412,7 @@ void print_token(const Token *token) {
     printf("}\n");
 }
 
-// ------------ С„СѓРЅРєС†РёРё РґР»СЏ СЂР°Р±РѕС‚С‹ СЃРѕ СЃС‚РµРєРѕРј --------------
+// ------------ функции для работы со стеком --------------
 
 void push_to_stack(Token** stack_top, Token* item)
 {
@@ -446,7 +446,7 @@ Token* pop_from_stack(Token** stack_top)
     return popped;
 }
 
-// ------------ С„СѓРЅРєС†РёРё РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РѕС‡РµСЂРµРґСЊСЋ --------------
+// ------------ функции для работы с очередью --------------
 
 
 void enqueue(Token** queue_front, Token** queue_rear, Token* item)
@@ -487,10 +487,10 @@ Token* dequeue(Token** queue_front, Token** queue_rear)
     return dequeued;
 }
 
-// ------------ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ С„СѓРЅРєС†РёРё --------------
+// ------------ вспомогательные функции --------------
 
 
-// Р¤СѓРЅРєС†РёСЏ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ РєРѕРЅС‚РµР№РЅРµСЂР° РІ double
+// Функция преобразования контейнера в double
 double container_to_double(Container* container) {
     if (!container) return 0.0;
 
@@ -522,12 +522,12 @@ Container* sin_func(Container** args, int arg_count) {
 
 Container* cos_func(Container** args, int arg_count) {
     if (arg_count != 1) {
-        printf("cos: РѕР¶РёРґР°РµС‚СЃСЏ 1 Р°СЂРіСѓРјРµРЅС‚\n");
+        printf("cos: ожидается 1 аргумент\n");
         return NULL;
     }
     if (!args[0]) return NULL;
     if (args[0]->type != CT_INT && args[0]->type != CT_FLOAT) {
-        printf("cos: Р°СЂРіСѓРјРµРЅС‚ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ С‡РёСЃР»РѕРј\n");
+        printf("cos: аргумент должен быть числом\n");
         return NULL;
     }
 
@@ -537,18 +537,18 @@ Container* cos_func(Container** args, int arg_count) {
 
 Container* log_func(Container** args, int arg_count) {
     if (arg_count != 1) {
-        printf("log: РѕР¶РёРґР°РµС‚СЃСЏ 1 Р°СЂРіСѓРјРµРЅС‚\n");
+        printf("log: ожидается 1 аргумент\n");
         return NULL;
     }
     if (!args[0]) return NULL;
     if (args[0]->type != CT_INT && args[0]->type != CT_FLOAT) {
-        printf("log: Р°СЂРіСѓРјРµРЅС‚ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ С‡РёСЃР»РѕРј\n");
+        printf("log: аргумент должен быть числом\n");
         return NULL;
     }
 
     double value = container_to_double(args[0]);
     if (value <= 0) {
-        printf("log: Р°СЂРіСѓРјРµРЅС‚ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РїРѕР»РѕР¶РёС‚РµР»СЊРЅС‹Рј\n");
+        printf("log: аргумент должен быть положительным\n");
         return NULL;
     }
     return create_float_container(log(value));
@@ -556,13 +556,13 @@ Container* log_func(Container** args, int arg_count) {
 
 Container* pow_func(Container** args, int arg_count) {
     if (arg_count != 2) {
-        printf("pow: РѕР¶РёРґР°РµС‚СЃСЏ 2 Р°СЂРіСѓРјРµРЅС‚Р°\n");
+        printf("pow: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) return NULL;
     if ((args[0]->type != CT_INT && args[0]->type != CT_FLOAT) ||
         (args[1]->type != CT_INT && args[1]->type != CT_FLOAT)) {
-        printf("pow: Р°СЂРіСѓРјРµРЅС‚С‹ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ С‡РёСЃР»Р°РјРё\n");
+        printf("pow: аргументы должны быть числами\n");
         return NULL;
     }
 
@@ -570,7 +570,7 @@ Container* pow_func(Container** args, int arg_count) {
     double exponent = container_to_double(args[1]);
 
     if (base == 0 && exponent < 0) {
-        printf("pow: РґРµР»РµРЅРёРµ РЅР° РЅРѕР»СЊ\n");
+        printf("pow: деление на ноль\n");
         return NULL;
     }
     return create_float_container(pow(base, exponent));
@@ -578,13 +578,13 @@ Container* pow_func(Container** args, int arg_count) {
 
 Container* max_func(Container* args[], int arg_count) {
     if (arg_count != 2) {
-        printf("max: РѕР¶РёРґР°РµС‚СЃСЏ 2 Р°СЂРіСѓРјРµРЅС‚Р°\n");
+        printf("max: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) return NULL;
     if ((args[0]->type != CT_INT && args[0]->type != CT_FLOAT) ||
         (args[1]->type != CT_INT && args[1]->type != CT_FLOAT)) {
-        printf("max: Р°СЂРіСѓРјРµРЅС‚С‹ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ С‡РёСЃР»Р°РјРё\n");
+        printf("max: аргументы должны быть числами\n");
         return NULL;
     }
 
@@ -595,19 +595,19 @@ Container* max_func(Container* args[], int arg_count) {
 
 Container* cross_func(Container** args, int arg_count) {
     if (arg_count != 2) {
-        printf("cross: РѕР¶РёРґР°РµС‚СЃСЏ 2 Р°СЂРіСѓРјРµРЅС‚Р°\n");
+        printf("cross: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) return NULL;
     if (args[0]->type != CT_VECTOR || args[1]->type != CT_VECTOR) {
-        printf("cross: РѕР±Р° Р°СЂРіСѓРјРµРЅС‚Р° РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ РІРµРєС‚РѕСЂР°РјРё\n");
+        printf("cross: оба аргумента должны быть векторами\n");
         return NULL;
     }
 
     VectorContainer* v1 = (VectorContainer*)args[0]->data;
     VectorContainer* v2 = (VectorContainer*)args[1]->data;
 
-    // Р’С‹С‡РёСЃР»РµРЅРёРµ РІРµРєС‚РѕСЂРЅРѕРіРѕ РїСЂРѕРёР·РІРµРґРµРЅРёСЏ
+    // Вычисление векторного произведения
     double x = v1->y * v2->z - v1->z * v2->y;
     double y = v1->z * v2->x - v1->x * v2->z;
     double z = v1->x * v2->y - v1->y * v2->x;
@@ -618,18 +618,25 @@ Container* cross_func(Container** args, int arg_count) {
 Container* abs_func(Container** args, int arg_count)
 {
     if (arg_count != 1) {
-        printf("length: РѕР¶РёРґР°РµС‚СЃСЏ 1 Р°СЂРіСѓРјРµРЅС‚\n");
+        printf("length: ожидается 1 аргумент\n");
         return NULL;
     }
     if (!args[0]) return NULL;
+
+    if (args[0]->type == CT_INT || args[0]->type == CT_FLOAT)
+    {
+        double value = container_to_double(args[0]);
+        return create_float_container(fabs(value));
+    }
+
     if (args[0]->type != CT_VECTOR) {
-        printf("length: Р°СЂРіСѓРјРµРЅС‚ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РІРµРєС‚РѕСЂРѕРј\n");
+        printf("length: аргумент должен быть вектором\n");
         return NULL;
     }
 
     VectorContainer* vec = (VectorContainer*)args[0]->data;
 
-    // Р’С‹С‡РёСЃР»РµРЅРёРµ РґР»РёРЅС‹ РІРµРєС‚РѕСЂР°
+    // Вычисление длины вектора
     double length = sqrt(vec->x * vec->x + vec->y * vec->y + vec->z * vec->z);
     return create_float_container(length);
 }
@@ -637,74 +644,74 @@ Container* abs_func(Container** args, int arg_count)
 Container* sub_func(Container** args, int arg_count)
 {
     if (arg_count != 2) {
-        printf("Р’С‹С‡РёС‚Р°РЅРёРµ: РѕР¶РёРґР°РµС‚СЃСЏ 2 Р°СЂРіСѓРјРµРЅС‚Р°\n");
+        printf("Вычитание: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) {
-        printf("Р’С‹С‡РёС‚Р°РЅРёРµ: Р°СЂРіСѓРјРµРЅС‚С‹ РЅРµ РјРѕРіСѓС‚ Р±С‹С‚СЊ NULL\n");
+        printf("Вычитание: аргументы не могут быть NULL\n");
         return NULL;
     }
 
     Container* a = args[0];
     Container* b = args[1];
 
-    // Р§РёСЃР»Р°
+    // Числа
     if ((a->type == CT_INT || a->type == CT_FLOAT) &&
         (b->type == CT_INT || b->type == CT_FLOAT)) {
         double result = container_to_double(a) - container_to_double(b);
         return create_float_container(result);
     }
 
-    // Р’РµРєС‚РѕСЂС‹
+    // Векторы
     if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
         VectorContainer* va = (VectorContainer*)a->data;
         VectorContainer* vb = (VectorContainer*)b->data;
         return create_vector_container(va->x - vb->x, va->y - vb->y, va->z - vb->z);
     }
 
-    printf("РћС€РёР±РєР°: РЅРµСЃРѕРІРјРµСЃС‚РёРјС‹Рµ С‚РёРїС‹ РґР»СЏ РІС‹С‡РёС‚Р°РЅРёСЏ\n");
+    printf("Ошибка: несовместимые типы для вычитания\n");
     return NULL;
 }
 
 Container* add_func(Container** args, int arg_count) {
     if (arg_count != 2) {
-        printf("РЎР»РѕР¶РµРЅРёРµ: РѕР¶РёРґР°РµС‚СЃСЏ 2 Р°СЂРіСѓРјРµРЅС‚Р°\n");
+        printf("Сложение: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) {
-        printf("РЎР»РѕР¶РµРЅРёРµ: Р°СЂРіСѓРјРµРЅС‚С‹ РЅРµ РјРѕРіСѓС‚ Р±С‹С‚СЊ NULL\n");
+        printf("Сложение: аргументы не могут быть NULL\n");
         return NULL;
     }
 
     Container* a = args[0];
     Container* b = args[1];
 
-    // Р§РёСЃР»Р°
+    // Числа
     if ((a->type == CT_INT || a->type == CT_FLOAT) &&
         (b->type == CT_INT || b->type == CT_FLOAT)) {
         double result = container_to_double(a) + container_to_double(b);
         return create_float_container(result);
     }
 
-    // Р’РµРєС‚РѕСЂС‹
+    // Векторы
     if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
         VectorContainer* va = (VectorContainer*)a->data;
         VectorContainer* vb = (VectorContainer*)b->data;
         return create_vector_container(va->x + vb->x, va->y + vb->y, va->z + vb->z);
     }
 
-    printf("РћС€РёР±РєР°: РЅРµСЃРѕРІРјРµСЃС‚РёРјС‹Рµ С‚РёРїС‹ РґР»СЏ СЃР»РѕР¶РµРЅРёСЏ\n");
+    printf("Ошибка: несовместимые типы для сложения\n");
     return NULL;
 }
 
 
 Container* neg_func(Container** args, int arg_count) {
     if (arg_count != 1) {
-        printf("РЈРЅР°СЂРЅС‹Р№ РјРёРЅСѓСЃ: РѕР¶РёРґР°РµС‚СЃСЏ 1 Р°СЂРіСѓРјРµРЅС‚\n");
+        printf("Унарный минус: ожидается 1 аргумент\n");
         return NULL;
     }
     if (!args[0]) {
-        printf("РЈРЅР°СЂРЅС‹Р№ РјРёРЅСѓСЃ: Р°СЂРіСѓРјРµРЅС‚ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ NULL\n");
+        printf("Унарный минус: аргумент не может быть NULL\n");
         return NULL;
     }
 
@@ -724,92 +731,92 @@ Container* neg_func(Container** args, int arg_count) {
             return create_vector_container(-vc->x, -vc->y, -vc->z);
         }
         default:
-            printf("РћС€РёР±РєР°: СѓРЅР°СЂРЅС‹Р№ РјРёРЅСѓСЃ РЅРµ РїСЂРёРјРµРЅРёРј Рє РґР°РЅРЅРѕРјСѓ С‚РёРїСѓ\n");
+            printf("Ошибка: унарный минус не применим к данному типу\n");
             return NULL;
     }
 }
 
 Container* div_func(Container** args, int arg_count) {
     if (arg_count != 2) {
-        printf("Р”РµР»РµРЅРёРµ: РѕР¶РёРґР°РµС‚СЃСЏ 2 Р°СЂРіСѓРјРµРЅС‚Р°\n");
+        printf("Деление: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) {
-        printf("Р”РµР»РµРЅРёРµ: Р°СЂРіСѓРјРµРЅС‚С‹ РЅРµ РјРѕРіСѓС‚ Р±С‹С‚СЊ NULL\n");
+        printf("Деление: аргументы не могут быть NULL\n");
         return NULL;
     }
 
     Container* a = args[0];
     Container* b = args[1];
 
-    // Р§РёСЃР»Р°
+    // Числа
     if ((a->type == CT_INT || a->type == CT_FLOAT) &&
         (b->type == CT_INT || b->type == CT_FLOAT)) {
         double divisor = container_to_double(b);
         if (divisor == 0.0) {
-            printf("РћС€РёР±РєР°: РґРµР»РµРЅРёРµ РЅР° РЅРѕР»СЊ\n");
+            printf("Ошибка: деление на ноль\n");
             return NULL;
         }
         double result = container_to_double(a) / divisor;
         return create_float_container(result);
     }
 
-    // Р’РµРєС‚РѕСЂ / С‡РёСЃР»Рѕ
+    // Вектор / число
     if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
         double divisor = container_to_double(b);
         if (divisor == 0.0) {
-            printf("РћС€РёР±РєР°: РґРµР»РµРЅРёРµ РЅР° РЅРѕР»СЊ\n");
+            printf("Ошибка: деление на ноль\n");
             return NULL;
         }
         VectorContainer* va = (VectorContainer*)a->data;
         return create_vector_container(va->x / divisor, va->y / divisor, va->z / divisor);
     }
 
-    printf("РћС€РёР±РєР°: РЅРµСЃРѕРІРјРµСЃС‚РёРјС‹Рµ С‚РёРїС‹ РґР»СЏ РґРµР»РµРЅРёСЏ\n");
+    printf("Ошибка: несовместимые типы для деления\n");
     return NULL;
 }
 
 Container* mul_func(Container** args, int arg_count) {
     if (arg_count != 2) {
-        printf("РЈРјРЅРѕР¶РµРЅРёРµ: РѕР¶РёРґР°РµС‚СЃСЏ 2 Р°СЂРіСѓРјРµРЅС‚Р°\n");
+        printf("Умножение: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) {
-        printf("РЈРјРЅРѕР¶РµРЅРёРµ: Р°СЂРіСѓРјРµРЅС‚С‹ РЅРµ РјРѕРіСѓС‚ Р±С‹С‚СЊ NULL\n");
+        printf("Умножение: аргументы не могут быть NULL\n");
         return NULL;
     }
 
     Container* a = args[0];
     Container* b = args[1];
 
-    // Р§РёСЃР»Р°
+    // Числа
     if ((a->type == CT_INT || a->type == CT_FLOAT) &&
         (b->type == CT_INT || b->type == CT_FLOAT)) {
         double result = container_to_double(a) * container_to_double(b);
         return create_float_container(result);
     }
 
-    // Р’РµРєС‚РѕСЂ * С‡РёСЃР»Рѕ
+    // Вектор * число
     if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
         VectorContainer* va = (VectorContainer*)a->data;
         double scalar = container_to_double(b);
         return create_vector_container(va->x * scalar, va->y * scalar, va->z * scalar);
     }
 
-    // Р§РёСЃР»Рѕ * РІРµРєС‚РѕСЂ
+    // Число * вектор
     if ((a->type == CT_INT || a->type == CT_FLOAT) && b->type == CT_VECTOR) {
         double scalar = container_to_double(a);
         VectorContainer* vb = (VectorContainer*)b->data;
         return create_vector_container(scalar * vb->x, scalar * vb->y, scalar * vb->z);
     }
 
-    // РЎРєР°Р»СЏСЂРЅРѕРµ РїСЂРѕРёР·РІРµРґРµРЅРёРµ РІРµРєС‚РѕСЂРѕРІ
+    // Скалярное произведение векторов
     if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
         VectorContainer* va = (VectorContainer*)a->data;
         VectorContainer* vb = (VectorContainer*)b->data;
         return create_float_container(va->x * vb->x + va->y * vb->y + va->z * vb->z);
     }
 
-    printf("РћС€РёР±РєР°: РЅРµСЃРѕРІРјРµСЃС‚РёРјС‹Рµ С‚РёРїС‹ РґР»СЏ СѓРјРЅРѕР¶РµРЅРёСЏ\n");
+    printf("Ошибка: несовместимые типы для умножения\n");
     return NULL;
 }
