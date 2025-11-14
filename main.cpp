@@ -71,14 +71,16 @@ Container* get_container(Token* token)
         Ident* existing = find_ident(FirstIdent, token->value);
         if (existing) {
             // Обновляем существующий идентификатор
-            return existing->value->container;
+            return container_deep_copy(existing->value->container);
         } else {
             return NULL;
         }
     }
     else
     {
-        return token->container;
+        Container* container = token->container;
+        token->container = nullptr;
+        return container;
     }
 }
 
@@ -288,9 +290,19 @@ Container* countRPN(Token *head)
                 Token* c = pop_from_stack(&stack_top);
                 Token* b = pop_from_stack(&stack_top);
                 Token* a = pop_from_stack(&stack_top);
-                Container* result = container_vector(get_container(a), get_container(b), get_container(c));
+
+                Container* ac = get_container(a);
+                Container* bc = get_container(b);
+                Container* cc = get_container(c);
+
+                Container* result = container_vector(ac, bc, cc);
                 Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
                 push_to_stack(&stack_top, result_token);
+
+                if(ac) free_container(ac);
+                if(bc) free_container(bc);
+                if(cc) free_container(cc);
+
                 free_token(a);
                 free_token(b);
                 free_token(c);
@@ -319,6 +331,11 @@ Container* countRPN(Token *head)
             if (!args) return NULL;
 
             Container* result = func_def->func(args, func_def->arg_count);
+
+            for(int i(0); i<func_def->arg_count; i++)
+            {
+                if(args[i]) free_container(args[i]);
+            }
             free(args);
 
             if (!result) {
@@ -345,6 +362,20 @@ Container* countRPN(Token *head)
                     free_token(value);
                     return NULL;
                 }
+                if(value->type == TOK_IDENT)
+                {
+                    Ident* value_ident = find_ident(FirstIdent, value->value);
+                    if(!value_ident)
+                    {
+                        printf("Ошибка: переменная %s не существует\n", value->value);
+                        free_token(ident);
+                        free_token(value);
+                        return NULL;
+                    }
+                    free_token(value);
+                    value = copy_token(value_ident->value);
+
+                }
 
                 // Сохраняем значение в таблице идентификаторов
                 Ident* existing = find_ident(FirstIdent, ident->value);
@@ -359,9 +390,9 @@ Container* countRPN(Token *head)
                 }
 
                 // Результат присваивания - значение
-                push_to_stack(&stack_top, copy_token(value));
+                push_to_stack(&stack_top, value);
                 free_token(ident);
-                free_token(value);
+                //free_token(value);
                 break;
             }
 
@@ -390,10 +421,10 @@ Container* countRPN(Token *head)
 
     // Извлекаем результат
     Token* result_token = pop_from_stack(&stack_top);
-
+    //print_container(stack_top->container);
     Container* result = NULL;
     if (result_token) {
-        result = container_deep_copy(get_container(result_token));
+        result = get_container(result_token);
     }
     free_token(result_token);
 
@@ -489,6 +520,7 @@ int main() {
         if (strcmp(input, "exit") == 0) {
             printf("Выход из калькулятора.\n");
             fprintf(screenshot, "Выход из калькулятора.\n");
+            cleanup_global_data(FirstIdent);
             break;
         }
 
@@ -557,6 +589,7 @@ int main() {
             fprintf(program, "%s\n", input);
             fflush(program);
             free_tokens(rpn);
+            free_container(result);
         } else {
             printf("Ошибка синтаксического анализа\n\n");
             fprintf(screenshot, "Ошибка синтаксического анализа\n\n");

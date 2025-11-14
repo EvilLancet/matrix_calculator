@@ -1,15 +1,6 @@
-sin(1) + cos(2)
-sin(0)
-log(0)
-log(1)
-pow(0,0)
-max(-1,1)
-max(0,-1)
-sin(cos(1))
-sin(cos(log
-sin(cos(log(pow(max(sin(0),1),2)))
-sin(cos(log(pow(max(sin(0),1),2))))
-log(10)
-log(2,7)
-log(2)
-log(2.7)
+a = 12
+b = 16
+
+c = sin(a) + cos(b)
+
+f = [a, b, c]

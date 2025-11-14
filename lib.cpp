@@ -5,6 +5,29 @@
 
 // ------------ ôóíêöèè äëÿ ğàáîòû ñ ïåğåìåííûìè --------------
 
+void cleanup_global_data(Ident* FirstIdent) {
+    // Î÷èñòêà òàáëèöû èäåíòèôèêàòîğîâ
+    Ident* current = FirstIdent;
+    while (current != NULL) {
+        Ident* next = current->next;
+
+        // Îñâîáîæäàåì èìÿ èäåíòèôèêàòîğà
+        if (current->name) {
+            free(current->name);
+        }
+
+        // Îñâîáîæäàåì çíà÷åíèå òîêåíà
+        if (current->value) {
+            free_token(current->value);
+        }
+
+        // Îñâîáîæäàåì ñàì èäåíòèôèêàòîğ
+        free(current);
+        current = next;
+    }
+    FirstIdent = NULL;
+}
+
 Ident* create_ident(char *name, Token *value)
 {
     Ident *new_ident = (Ident*)malloc(sizeof(Ident));
@@ -187,6 +210,7 @@ void free_container(Container *container) {
 // Ôóíêöèÿ äëÿ ïå÷àòè êîíòåéíåğà
 void print_container(Container *container) {
     if (container && container->print_func) {
+            //printf("ÏÅ×ÀÒÀÅÌ!!!");
         container->print_func(container->data);
     }
 }

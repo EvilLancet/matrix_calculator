@@ -91,6 +91,8 @@ typedef struct {
     MathFunction func;
 } FunctionDef;
 
+void cleanup_global_data(Ident* FirstIdent);
+
 Token* shuntingYard(Token* tokens);
 Container* countRPN(Token *head);
 
