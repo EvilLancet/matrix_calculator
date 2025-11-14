@@ -4,14 +4,14 @@ static const char *src;
 static int pos = 0;
 
 
-// Функция для пропуска пробельных символов
+
 void skip_whitespace() {
     while (src[pos] != '\0' && isspace((unsigned char)src[pos])) {
         pos++;
     }
 }
 
-// Функция для чтения числа
+
 char *read_number() {
     int start = pos;
     while (isdigit((unsigned char)src[pos]) || src[pos] == '.') {
@@ -24,7 +24,7 @@ char *read_number() {
     return number;
 }
 
-// Функция для чтения идентификатора
+
 char *read_identifier() {
     int start = pos;
     while (isalnum((unsigned char)src[pos]) || src[pos] == '_') {
@@ -37,12 +37,12 @@ char *read_identifier() {
     return ident;
 }
 
-// Функция для определения унарного минуса
+
 int is_unary_minus(Token *last_token) {
-    // Унарный минус, если:
-    // 1. Это первый токен
-    // 2. После оператора (+, -, *, /, =)
-    // 3. После открывающей скобки
+    
+    
+    
+    
     if (last_token == nullptr) {
         return 1;
     }
@@ -62,7 +62,7 @@ int is_unary_minus(Token *last_token) {
     }
 }
 
-// Основная функция лексического анализа
+
 Token *lex(const char *input) {
     src = input;
     pos = 0;
@@ -78,7 +78,7 @@ Token *lex(const char *input) {
 
         if (current == '\0') break;
 
-        // Числа
+        
         if (isdigit((unsigned char)current)) {
             char *number = read_number();
             Token *token = create_number_token(number);
@@ -88,18 +88,18 @@ Token *lex(const char *input) {
             continue;
         }
 
-        // Идентификаторы и функции
+        
         if (isalpha((unsigned char)current) || current == '_') {
             char *ident = read_identifier();
 
-            // Проверяем, является ли идентификатор функцией
+            
             int is_func = 0;
             int next_pos = pos;
             skip_whitespace();
             if (src[pos] == '(') {
                 is_func = 1;
             }
-            pos = next_pos; // Возвращаем позицию
+            pos = next_pos; 
 
             Token *token = create_token(is_func ? TOK_FUNCTION : TOK_IDENT, ident);
             add_token(&head, &tail, token);
@@ -108,12 +108,12 @@ Token *lex(const char *input) {
             continue;
         }
 
-        // Операторы, скобки и новые символы
+        
         Token *token = nullptr;
         switch (current) {
             case '+': token = create_token(TOK_PLUS, "+"); break;
             case '-':
-                // Проверяем, является ли минус унарным
+                
                 if (is_unary_minus(last_token)) {
                     token = create_token(TOK_UMINUS, "u-");
                 } else {
@@ -139,7 +139,7 @@ Token *lex(const char *input) {
         pos++;
     }
 
-    // Добавляем токен конца файла
+    
     Token *eof = create_token(TOK_EOF, "EOF");
     add_token(&head, &tail, eof);
 

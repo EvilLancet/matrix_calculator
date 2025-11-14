@@ -1,7 +1,7 @@
 #include "lib.h"
 
 
-// Глобальные переменные для позиции в исходном коде
+
 
 Ident* FirstIdent;
 
@@ -49,7 +49,7 @@ Container** extract_args_safely(Token** stack, int arg_count, const char* func_n
     for (int i = arg_count - 1; i >= 0; i--) {
         Token* token = pop_from_stack(stack);
         if (!token) {
-            // Освобождаем уже извлеченные контейнеры
+            
             for (int j = arg_count - 1; j > i; j--) {
                 free_container(args[j]);
             }
@@ -70,7 +70,7 @@ Container* get_container(Token* token)
     {
         Ident* existing = find_ident(FirstIdent, token->value);
         if (existing) {
-            // Обновляем существующий идентификатор
+            
             return container_deep_copy(existing->value->container);
         } else {
             return NULL;
@@ -86,7 +86,7 @@ Container* get_container(Token* token)
 
 
 
-// Функция для получения приоритета оператора
+
 int get_priority(TokenT type) {
     switch (type) {
         case TOK_PLUS:
@@ -96,7 +96,7 @@ int get_priority(TokenT type) {
         case TOK_DIVIDE:
             return 2;
         case TOK_UMINUS:
-            return 3; // Унарный минус имеет высший приоритет
+            return 3; 
         case TOK_ASSIGN:
             return 0;
         default:
@@ -105,22 +105,22 @@ int get_priority(TokenT type) {
 }
 
 void process_comma(Token** stack_top, Token** output_front, Token** output_rear) {
-    // Выталкиваем операторы из стека до тех пор,
-    // пока не встретим левую круглую или квадратную скобку
+    
+    
     while (*stack_top) {
         Token* top = *stack_top;
 
-        // Останавливаемся на открывающих скобках
+        
         if (top->type == TOK_LPAREN || top->type == TOK_LBRACKET) {
             break;
         }
 
-        // Выталкиваем оператор в выходную очередь
+        
         Token* op = pop_from_stack(stack_top);
         enqueue(output_front, output_rear, op);
     }
 
-    // Проверяем, что запятая находится внутри скобок
+    
     if (!*stack_top ||
         ((*stack_top)->type != TOK_LPAREN && (*stack_top)->type != TOK_LBRACKET)) {
         printf("Ошибка: запятая находится вне скобок\n");
@@ -129,23 +129,23 @@ void process_comma(Token** stack_top, Token** output_front, Token** output_rear)
 }
 
 void process_parenthesis(Token** stack_top, Token** output_front, Token** output_rear) {
-    // Выталкиваем все операторы до открывающей круглой скобки
+    
     while (*stack_top && (*stack_top)->type != TOK_LPAREN) {
         Token* op = pop_from_stack(stack_top);
         enqueue(output_front, output_rear, op);
     }
 
-    // Проверяем, что нашли открывающую скобку
+    
     if (!*stack_top) {
         printf("Ошибка: несогласованные круглые скобки\n");
         return;
     }
 
-    // Удаляем открывающую круглую скобку из стека
+    
     Token* bracket = pop_from_stack(stack_top);
     free_token(bracket);
 
-    // Если на вершине стека находится функция, перемещаем ее в выходную очередь
+    
     if (*stack_top && (*stack_top)->type == TOK_FUNCTION) {
         Token* func = pop_from_stack(stack_top);
         enqueue(output_front, output_rear, func);
@@ -153,24 +153,24 @@ void process_parenthesis(Token** stack_top, Token** output_front, Token** output
 }
 
 void process_vector_end(Token** stack_top, Token** output_front, Token** output_rear) {
-    // Выталкиваем все операторы до открывающей квадратной скобки
+    
     while (*stack_top && (*stack_top)->type != TOK_LBRACKET) {
         Token* op = pop_from_stack(stack_top);
         enqueue(output_front, output_rear, op);
     }
 
-    // Проверяем, что нашли открывающую скобку
+    
     if (!*stack_top) {
         printf("Ошибка: несогласованные квадратные скобки\n");
         return;
     }
 
-    // Удаляем открывающую квадратную скобку из стека
+    
     Token* bracket = pop_from_stack(stack_top);
     free_token(bracket);
 
-    // Добавляем специальный оператор VECTOR в выходную очередь
-    // Этот оператор будет обработан при вычислении RPN
+    
+    
     Token* vector_op = create_token(TOK_VECTOR, "VECTOR");
     enqueue(output_front, output_rear, vector_op);
 }
@@ -185,37 +185,37 @@ Token* shuntingYard(Token* tokens) {
         switch (current->type) {
             case TOK_NUMBER:
             case TOK_IDENT:
-                // Числа и идентификаторы сразу в выход
+                
                 enqueue(&output_front, &output_rear, copy_token(current));
                 break;
 
             case TOK_FUNCTION:
-                // Функции помещаем в стек
+                
                 push_to_stack(&stack_top, copy_token(current));
                 break;
 
             case TOK_COMMA:
-                // Запятая - разделитель аргументов
+                
                 process_comma(&stack_top, &output_front, &output_rear);
                 break;
 
             case TOK_LBRACKET:
-                // Открывающая квадратная скобка - в стек
+                
                 push_to_stack(&stack_top, copy_token(current));
                 break;
 
             case TOK_LPAREN:
-                // Открывающая круглая скобка - в стек
+                
                 push_to_stack(&stack_top, copy_token(current));
                 break;
 
             case TOK_RBRACKET:
-                // Закрывающая квадратная скобка - обрабатываем вектор
+                
                 process_vector_end(&stack_top, &output_front, &output_rear);
                 break;
 
             case TOK_RPAREN:
-                // Закрывающая круглая скобка
+                
                 process_parenthesis(&stack_top, &output_front, &output_rear);
                 break;
 
@@ -240,17 +240,17 @@ Token* shuntingYard(Token* tokens) {
                 break;
 
             default:
-                // Пропускаем неизвестные токены
+                
                 break;
         }
         current = current->next;
     }
 
-    // После обработки всех токенов выталкиваем оставшиеся операторы из стека
+    
     while (stack_top) {
         Token* op = pop_from_stack(&stack_top);
 
-        // Проверяем, что не осталось несогласованных скобок
+        
         if (op->type == TOK_LPAREN || op->type == TOK_LBRACKET) {
             printf("Ошибка: несогласованные скобки\n");
             free_token(op);
@@ -263,11 +263,11 @@ Token* shuntingYard(Token* tokens) {
 }
 
 
-// Функции арифметических операций
+
 Container* container_vector(Container* a, Container* b, Container* c) {
     if (!a || !b || !c) return NULL;
 
-    // Числа
+    
     if ((a->type == CT_INT || a->type == CT_FLOAT) &&
         (b->type == CT_INT || b->type == CT_FLOAT) &&
         (c->type == CT_INT || c->type == CT_FLOAT)) {
@@ -311,7 +311,7 @@ Container* countRPN(Token *head)
             case TOK_NUMBER:
             case TOK_IDENT:
 
-                // Копируем токен и помещаем в стек
+                
                 push_to_stack(&stack_top, copy_token(current));
                 break;
 
@@ -348,7 +348,7 @@ Container* countRPN(Token *head)
             }
 
             case TOK_ASSIGN: {
-                // Обработка присваивания (a = 5)
+                
                 if (!stack_top || !stack_top->next) {
                     printf("Ошибка: недостаточно операндов для =\n");
                     return NULL;
@@ -377,22 +377,22 @@ Container* countRPN(Token *head)
 
                 }
 
-                // Сохраняем значение в таблице идентификаторов
+                
                 Ident* existing = find_ident(FirstIdent, ident->value);
                 if (existing) {
-                    // Обновляем существующий идентификатор
+                    
                     free_token(existing->value);
                     existing->value = copy_token(value);
                 } else {
-                    // Создаем новый идентификатор
+                    
                     Ident* new_ident = create_ident(ident->value, copy_token(value));
                     add_ident(&FirstIdent, new_ident);
                 }
 
-                // Результат присваивания - значение
+                
                 push_to_stack(&stack_top, value);
                 free_token(ident);
-                //free_token(value);
+                
                 break;
             }
 
@@ -403,7 +403,7 @@ Container* countRPN(Token *head)
         current = current->next;
     }
 
-    // Проверяем, что в стеке остался ровно один элемент
+    
     if (!stack_top) {
         printf("Ошибка: пустой стек\n");
         return NULL;
@@ -411,7 +411,7 @@ Container* countRPN(Token *head)
 
     if (stack_top->next) {
         printf("Ошибка: в стеке осталось несколько элементов\n");
-        // Очищаем стек
+        
         while (stack_top) {
             Token* temp = pop_from_stack(&stack_top);
             free_token(temp);
@@ -419,9 +419,9 @@ Container* countRPN(Token *head)
         return NULL;
     }
 
-    // Извлекаем результат
+    
     Token* result_token = pop_from_stack(&stack_top);
-    //print_container(stack_top->container);
+    
     Container* result = NULL;
     if (result_token) {
         result = get_container(result_token);
@@ -431,7 +431,7 @@ Container* countRPN(Token *head)
     return result;
 }
 
-// Функция для печати списка токенов
+
 void print_tokens(Token *head) {
     const char *type_names[] = {
         "EOF", "NUMBER", "IDENT", "PLUS", "MINUS",
@@ -447,7 +447,7 @@ void print_tokens(Token *head) {
     }
 }
 
-// Функция для печати выражения в ОПЗ
+
 void print_rpn(Token* head) {
     printf("Выражение в ОПЗ: ");
     Token* current = head;
@@ -505,18 +505,18 @@ int main() {
         printf(">> ");
         fprintf(screenshot, ">> ");
 
-        // Считываем ввод пользователя
+        
         if (fgets(input, sizeof(input), stdin) == NULL) {
             break;
         }
 
-        // Записываем ввод в screenshot
+        
         fprintf(screenshot, "%s", input);
 
-        // Удаляем символ новой строки
+        
         input[strcspn(input, "\n")] = 0;
 
-        // Проверяем на выход
+        
         if (strcmp(input, "exit") == 0) {
             printf("Выход из калькулятора.\n");
             fprintf(screenshot, "Выход из калькулятора.\n");
@@ -524,20 +524,20 @@ int main() {
             break;
         }
 
-        // Обработка команды save
+        
         if (strcmp(input, "save") == 0) {
             copy_file(program_bu, "program.txt");
             continue;
         }
 
-        // Обработка команды screen
+        
         if (strcmp(input, "screen") == 0) {
             fflush(screenshot);
             copy_file(screenshot_bu, "screenshot.txt");
             continue;
         }
 
-        // Обработка команды open
+        
         if (strcmp(input, "open") == 0) {
             execute_from_program_txt(program, screenshot);
             continue;
@@ -557,13 +557,13 @@ int main() {
             continue;
         }
 
-        // Пропускаем пустые строки
+        
         if (strlen(input) == 0) {
             continue;
         }
 
-        // Здесь ваш существующий код обработки выражений
-        // Лексический анализ
+        
+        
         Token *tokens = lex(input);
         if (tokens == nullptr) {
             printf("Ошибка лексического анализа\n\n");
@@ -571,21 +571,21 @@ int main() {
             continue;
         }
 
-        // Синтаксический анализ и преобразование в ОПН
+        
         Token* rpn = shuntingYard(tokens);
         if (rpn != nullptr) {
-            // Вычисление результата
+            
             result = countRPN(rpn);
             printf("<< ");
             fprintf(screenshot, "<< ");
 
-            // Вывод результата
+            
             print_container(result);
             fputc('\n', stdout);
-            //print_container(result);
+            
             fputc('\n', screenshot);
 
-            // Записываем входное выражение в program файл
+            
             fprintf(program, "%s\n", input);
             fflush(program);
             free_tokens(rpn);

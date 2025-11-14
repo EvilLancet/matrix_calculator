@@ -36,14 +36,14 @@ typedef enum
     CT_STRING
 } ContainerType;
 
-// Типы токенов
+
 
 
 typedef struct Container {
     ContainerType type;
     void *data;
-    void (*free_func)(void*);     // Функция освобождения данных
-    void (*print_func)(void*);    // Функция печати (опционально)
+    void (*free_func)(void*);     
+    void (*print_func)(void*);    
 } Container;
 
 typedef struct {
@@ -65,7 +65,7 @@ typedef struct {
     double z;
 } VectorContainer;
 
-// Структура токена (узел двусвязного списка)
+
 typedef struct Token {
     TokenT type;
     char *value;
