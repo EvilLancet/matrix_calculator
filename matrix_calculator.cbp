@@ -24,6 +24,9 @@
 			<Add option="-fexceptions" />
 		</Compiler>
 		<Unit filename="file_parse.cpp" />
+		<Unit filename="icons.rc">
+			<Option compilerVar="WINDRES" />
+		</Unit>
 		<Unit filename="lexer.cpp" />
 		<Unit filename="lib.cpp" />
 		<Unit filename="lib.h" />

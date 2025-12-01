@@ -30,7 +30,7 @@
 1759504063 f:\marinelogbook\matrix_calculator\error.h
 	<string>
 
-1763031959 source:c:\users\timurr\documents\github\matrix_calculator2\main.cpp
+1764566609 source:c:\users\timurr\documents\github\matrix_calculator2\main.cpp
 	"lib.h"
 
 1763048398 source:f:\marinelogbook\matrix_calculator\lib.cpp
@@ -44,10 +44,10 @@
 	<ctype.h>
 	<math.h>
 
-1763032122 source:c:\users\timurr\documents\github\matrix_calculator2\lib.cpp
+1764566418 source:c:\users\timurr\documents\github\matrix_calculator2\lib.cpp
 	"lib.h"
 
-1763031663 c:\users\timurr\documents\github\matrix_calculator2\lib.h
+1764240280 c:\users\timurr\documents\github\matrix_calculator2\lib.h
 	<windows.h>
 	<stdio.h>
 	<stdlib.h>
@@ -55,7 +55,7 @@
 	<ctype.h>
 	<math.h>
 
-1763014985 source:c:\users\timurr\documents\github\matrix_calculator2\lexer.cpp
+1764240280 source:c:\users\timurr\documents\github\matrix_calculator2\lexer.cpp
 	"lib.h"
 
 1763031443 source:c:\users\timurr\documents\github\matrix_calculator2\file_parse.cpp
@@ -66,4 +66,6 @@
 
 1763048398 source:f:\marinelogbook\matrix_calculator\lexer.cpp
 	"lib.h"
+
+1764587892 source:c:\users\timurr\documents\github\matrix_calculator2\icons.rc
 

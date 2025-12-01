@@ -6,22 +6,22 @@
 
 
 void cleanup_global_data(Ident* FirstIdent) {
-    
+
     Ident* current = FirstIdent;
     while (current != NULL) {
         Ident* next = current->next;
 
-        
+
         if (current->name) {
             free(current->name);
         }
 
-        
+
         if (current->value) {
             free_token(current->value);
         }
 
-        
+
         free(current);
         current = next;
     }
@@ -33,7 +33,7 @@ Ident* create_ident(char *name, Token *value)
     Ident *new_ident = (Ident*)malloc(sizeof(Ident));
     if (!new_ident) return nullptr;
 
-    new_ident->name = strdup(name); 
+    new_ident->name = strdup(name);
     new_ident->value = value;
     new_ident->prev = nullptr;
     new_ident->next = nullptr;
@@ -58,19 +58,19 @@ void add_ident(Ident **first, Ident *new_ident) {
 void remove_ident(Ident **first, Ident *ident_to_remove) {
     if (!first || !*first || !ident_to_remove) return;
 
-    
+
     if (*first == ident_to_remove) {
         *first = ident_to_remove->next;
     }
 
-    
+
     if (ident_to_remove->prev)
         ident_to_remove->prev->next = ident_to_remove->next;
 
     if (ident_to_remove->next)
         ident_to_remove->next->prev = ident_to_remove->prev;
 
-    
+
     free(ident_to_remove->name);
     free(ident_to_remove);
 }
@@ -85,7 +85,7 @@ Ident* find_ident(Ident *first, const char *name) {
         current = current->next;
     }
 
-    return nullptr; 
+    return nullptr;
 }
 
 
@@ -210,7 +210,7 @@ void free_container(Container *container) {
 
 void print_container(Container *container) {
     if (container && container->print_func) {
-            
+
         container->print_func(container->data);
     }
 }
@@ -281,7 +281,7 @@ Token *create_token(TokenT type, const char *value) {
     Token *token = (Token*)malloc(sizeof(Token));
     token->type = type;
     token->value = value ? strdup(value) : NULL;
-    token->container = NULL;  
+    token->container = NULL;
     token->prev = NULL;
     token->next = NULL;
     return token;
@@ -327,12 +327,12 @@ void add_token(Token **head, Token **tail, Token *token) {
 void free_token(Token *token) {
     if (token == NULL) return;
 
-    
+
     if (token->value) {
         free(token->value);
     }
 
-    
+
     if (token->container) {
         free_container(token->container);
     }
@@ -354,7 +354,7 @@ void free_tokens(Token *head) {
 void token_set_container(Token *token, Container *container) {
     if (token == NULL) return;
 
-    
+
     if (token->container) {
         free_container(token->container);
     }
@@ -373,14 +373,14 @@ Token *create_number_token(const char *value) {
 
     Token *token = create_token(TOK_NUMBER, value);
     if (token) {
-        
+
         if (strchr(value, '.') != NULL) {
             double float_value = atof(value);
-            
+
             token->container = create_float_container(float_value);
         } else {
             int int_value = atoi(value);
-            
+
             token->container = create_int_container(int_value);
         }
     }
@@ -400,7 +400,7 @@ Token *create_string_token(TokenT type, const char *value) {
 
 
 Token *create_vector_token(double x, double y, double z) {
-    Token *token = create_token(TOK_VECTOR, NULL); 
+    Token *token = create_token(TOK_VECTOR, NULL);
     if (token) {
         token->container = create_vector_container(x, y, z);
     }
@@ -631,7 +631,7 @@ Container* cross_func(Container** args, int arg_count) {
     VectorContainer* v1 = (VectorContainer*)args[0]->data;
     VectorContainer* v2 = (VectorContainer*)args[1]->data;
 
-    
+
     double x = v1->y * v2->z - v1->z * v2->y;
     double y = v1->z * v2->x - v1->x * v2->z;
     double z = v1->x * v2->y - v1->y * v2->x;
@@ -660,7 +660,7 @@ Container* abs_func(Container** args, int arg_count)
 
     VectorContainer* vec = (VectorContainer*)args[0]->data;
 
-    
+
     double length = sqrt(vec->x * vec->x + vec->y * vec->y + vec->z * vec->z);
     return create_float_container(length);
 }
@@ -679,14 +679,14 @@ Container* sub_func(Container** args, int arg_count)
     Container* a = args[0];
     Container* b = args[1];
 
-    
+
     if ((a->type == CT_INT || a->type == CT_FLOAT) &&
         (b->type == CT_INT || b->type == CT_FLOAT)) {
         double result = container_to_double(a) - container_to_double(b);
         return create_float_container(result);
     }
 
-    
+
     if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
         VectorContainer* va = (VectorContainer*)a->data;
         VectorContainer* vb = (VectorContainer*)b->data;
@@ -710,14 +710,14 @@ Container* add_func(Container** args, int arg_count) {
     Container* a = args[0];
     Container* b = args[1];
 
-    
+
     if ((a->type == CT_INT || a->type == CT_FLOAT) &&
         (b->type == CT_INT || b->type == CT_FLOAT)) {
         double result = container_to_double(a) + container_to_double(b);
         return create_float_container(result);
     }
 
-    
+
     if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
         VectorContainer* va = (VectorContainer*)a->data;
         VectorContainer* vb = (VectorContainer*)b->data;
@@ -773,7 +773,7 @@ Container* div_func(Container** args, int arg_count) {
     Container* a = args[0];
     Container* b = args[1];
 
-    
+
     if ((a->type == CT_INT || a->type == CT_FLOAT) &&
         (b->type == CT_INT || b->type == CT_FLOAT)) {
         double divisor = container_to_double(b);
@@ -785,7 +785,7 @@ Container* div_func(Container** args, int arg_count) {
         return create_float_container(result);
     }
 
-    
+
     if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
         double divisor = container_to_double(b);
         if (divisor == 0.0) {
@@ -813,28 +813,28 @@ Container* mul_func(Container** args, int arg_count) {
     Container* a = args[0];
     Container* b = args[1];
 
-    
+
     if ((a->type == CT_INT || a->type == CT_FLOAT) &&
         (b->type == CT_INT || b->type == CT_FLOAT)) {
         double result = container_to_double(a) * container_to_double(b);
         return create_float_container(result);
     }
 
-    
+
     if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
         VectorContainer* va = (VectorContainer*)a->data;
         double scalar = container_to_double(b);
         return create_vector_container(va->x * scalar, va->y * scalar, va->z * scalar);
     }
 
-    
+
     if ((a->type == CT_INT || a->type == CT_FLOAT) && b->type == CT_VECTOR) {
         double scalar = container_to_double(a);
         VectorContainer* vb = (VectorContainer*)b->data;
         return create_vector_container(scalar * vb->x, scalar * vb->y, scalar * vb->z);
     }
 
-    
+
     if (a->type == CT_VECTOR && b->type == CT_VECTOR) {
         VectorContainer* va = (VectorContainer*)a->data;
         VectorContainer* vb = (VectorContainer*)b->data;
@@ -844,3 +844,4 @@ Container* mul_func(Container** args, int arg_count) {
     printf("Ошибка: несовместимые типы для умножения\n");
     return NULL;
 }
+
