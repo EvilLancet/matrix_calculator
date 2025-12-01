@@ -23,6 +23,7 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="file_org.cpp" />
 		<Unit filename="file_parse.cpp" />
 		<Unit filename="icons.rc">
 			<Option compilerVar="WINDRES" />
