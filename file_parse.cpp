@@ -1,104 +1,51 @@
 #include "lib.h"
 
-void copy_file(const char* source, const char* destination) {
-    FILE* src = fopen(source, "r");
-    if (src == NULL) {
-        printf("Ошибка: не удалось открыть файл %s\n", source);
+
+
+void execute_from_file(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        print_log("Ошибка: не удалось открыть файл скрипта '%s'\n", filename);
         return;
     }
 
-    FILE* dst = fopen(destination, "w");
-    if (dst == NULL) {
-        printf("Ошибка: не удалось создать файл %s\n", destination);
-        fclose(src);
-        return;
-    }
-
-    char buffer[1024];
-    size_t bytes;
-    while ((bytes = fread(buffer, 1, sizeof(buffer), src)) > 0) {
-        fwrite(buffer, 1, bytes, dst);
-    }
-
-    fclose(src);
-    fclose(dst);
-    printf("Файл успешно скопирован: %s -> %s\n", source, destination);
-}
-
-// Функция для выполнения команд из файла program.txt
-void execute_from_program_txt(FILE* program_file, FILE* screenshot_file) {
-
-    char filename[256];
-
-    printf("Введите название файла: ");
-    fgets(filename, sizeof(filename), stdin);
-    filename[strcspn(filename, "\n")] = 0;
-
-    FILE* input_file = fopen(filename, "r");
-    if (input_file == NULL) {
-        printf("Ошибка: не удалось открыть файл %s\n", filename);
-        return;
-    }
+    print_log("--- Начало выполнения файла %s ---\n", filename);
 
     char line[256];
-    Container* result;
-
-    printf("Выполнение команд из %s...\n", filename);
-    fprintf(screenshot_file, "Выполнение команд из %s...\n", filename);
-
-    while (fgets(line, sizeof(line), input_file) != NULL) {
-        // Удаляем символ новой строки
+    while (fgets(line, sizeof(line), file) != NULL) {
+        // Удаляем перенос строки
         line[strcspn(line, "\n")] = 0;
 
+        // Пропускаем пустые строки
         if (strlen(line) == 0) continue;
 
-        // Пропускаем команды save/screen/open при выполнении из файла
-        if (strcmp(line, "save") == 0 || strcmp(line, "screen") == 0 ||
-            strcmp(line, "open") == 0 || strcmp(line, "exit") == 0) {
-            printf(">> %s\n", line);
-            fprintf(screenshot_file, ">> %s\n", line);
-            printf("<< Команда пропущена при выполнении из файла\n");
-            fprintf(screenshot_file, "<< Команда пропущена при выполнении из файла\n");
+        // Эхо-печать команды (чтобы видеть, что выполняется)
+        print_log(">> %s\n", line);
+
+        // === ЗАЩИТА ОТ РЕКУРСИИ И СИСТЕМНЫХ КОМАНД ===
+        // Мы не разрешаем скрипту вызывать другой скрипт, сохранять файлы или выходить.
+        // Это предотвращает зависание и порчу файлов.
+        if (strncmp(line, "open", 4) == 0 ||
+            strcmp(line, "save") == 0 ||
+            strcmp(line, "screen") == 0 ||
+            strcmp(line, "exit") == 0 ||
+            strcmp(line, "cls") == 0) {
+
+            print_log("<< Команда пропущена (безопасность)\n\n");
             continue;
         }
 
-        // Выводим команду в консоль и screenshot
-        printf(">> %s\n", line);
-        fprintf(screenshot_file, ">> %s\n", line);
+        // === ВЫПОЛНЕНИЕ ===
+        process_expression(line);
 
-        // Обрабатываем команду как математическое выражение
-        Token *tokens = lex(line);
-        if (tokens == nullptr) {
-            printf("Ошибка лексического анализа\n\n");
-            fprintf(screenshot_file, "Ошибка лексического анализа\n\n");
-            continue;
-        }
-
-        Token* rpn = shuntingYard(tokens);
-        if (rpn != nullptr) {
-            // Вычисление результата
-            result = countRPN(rpn);
-            printf("<< ");
-            fprintf(screenshot_file, "<< ");
-
-            // Вывод результата
-            print_container(result);
-            printf("\n");
-            fprintf(screenshot_file, "\n");
-
-            // Записываем команду в program_bu файл
-            fprintf(program_file, "%s\n", line);
-
-            free_tokens(rpn);
-        } else {
-            printf("Ошибка синтаксического анализа\n\n");
-            fprintf(screenshot_file, "Ошибка синтаксического анализа\n\n");
-        }
-
-        free_tokens(tokens);
+        // === ИСТОРИЯ ===
+        // Добавляем успешную команду из файла в общую историю сессии,
+        // чтобы при нажатии 'save' эти команды тоже сохранились.
+        char cmd_with_newline[300];
+        sprintf(cmd_with_newline, "%s\n", line);
+        append_to_file("history.tmp", cmd_with_newline);
     }
 
-    fclose(input_file);
-    printf("Выполнение команд из завершено.\n");
-    fprintf(screenshot_file, "Выполнение команд завершено.\n");
+    fclose(file);
+    print_log("--- Конец выполнения файла %s ---\n", filename);
 }

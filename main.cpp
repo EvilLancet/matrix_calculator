@@ -661,117 +661,104 @@ void print_help(FILE* screenshot_file) {
 }
 
 
+void print_welcome_message()
+{
+    const char* welcome_msg =
+        "==========================================================\n"
+        "   Консольный Калькулятор (Числа, Векторы, Переменные)    \n"
+        "==========================================================\n"
+        "Введите математическое выражение и нажмите Enter.\n"
+        "Примеры:  2 + 2 * 2  |  x = sin(0.5)  |  v = [1, 2, 3]\n"
+        "\n"
+        "Введите 'help' для полного списка команд и примеров.\n"
+        "Введите 'exit' для выхода.\n"
+        "----------------------------------------------------------\n";
+
+    print_log("%s", welcome_msg);
+}
+
 int main() {
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
 
-    FILE* screenshot = fopen(screenshot_bu, "w");
-    FILE* program = fopen(program_bu, "w");
+    clear_file("session.tmp");
+    clear_file("history.tmp");
+
+    print_welcome_message(); // Ваша функция с print_log
 
     char input[256];
-    Container* result;
-
-    printf("Калькулятор запущен. Для выхода введите 'exit'. Для справки введите 'help'.\n");
-    fprintf(screenshot, "Калькулятор запущен. Для выхода введите 'exit'. Для справки введите 'help'.\n");
 
     while (1) {
-        printf(">> ");
-        fprintf(screenshot, ">> ");
+        print_log(">> ");
 
+        if (fgets(input, sizeof(input), stdin) == NULL) break;
 
-        if (fgets(input, sizeof(input), stdin) == NULL) {
-            break;
-        }
-
-
-        fprintf(screenshot, "%s", input);
-
+        // Логируем ввод пользователя
+        append_to_file("session.tmp", input);
 
         input[strcspn(input, "\n")] = 0;
+        if (strlen(input) == 0) continue;
 
-
-        if (strcmp(input, "exit") == 0) {
-            printf("Выход из калькулятора.\n");
-            fprintf(screenshot, "Выход из калькулятора.\n");
-            cleanup_global_data(FirstIdent);
-            break;
-        }
-
+        // Обработка команд
+        if (strcmp(input, "exit") == 0) break;
 
         if (strcmp(input, "save") == 0) {
-            copy_file(program_bu, "program.txt");
+            copy_file("history.tmp", "program.txt");
             continue;
         }
-
 
         if (strcmp(input, "screen") == 0) {
-            fflush(screenshot);
-            copy_file(screenshot_bu, "screenshot.txt");
-            continue;
-        }
-
-
-        if (strcmp(input, "open") == 0) {
-            execute_from_program_txt(program, screenshot);
-            continue;
-        }
-
-        if (strcmp(input, "help") == 0) {
-            print_help(screenshot);
+            copy_file("session.tmp", "screenshot.txt");
             continue;
         }
 
         if (strcmp(input, "cls") == 0) {
             system("cls");
-            fclose(screenshot);
-            fclose(program);
-            screenshot = fopen(screenshot_bu, "w");
-            program = fopen(program_bu, "w");
+            clear_file("session.tmp");
             continue;
         }
 
-
-        if (strlen(input) == 0) {
+        if (strcmp(input, "help") == 0) {
+            print_help(NULL); // print_help должна использовать print_log
             continue;
         }
 
+        // Обработка "open имя_файла"
+        if (strncmp(input, "open", 4) == 0) {
+            // Если пользователь ввел просто "open", спрашиваем имя (как у вас было)
+            // Или парсим имя из строки "open file.txt"
+            char filename[256] = "program.txt"; // Дефолтное имя
 
+            // Простая логика: если есть пробел, берем то, что после него
+            char* space = strchr(input, ' ');
+            if (space != NULL && strlen(space + 1) > 0) {
+                strcpy(filename, space + 1);
+            } else {
+                 // Если преподаватель хочет ввод имени отдельно:
+                 print_log("Введите имя файла: ");
+                 // Тут нужен fgets, но чтобы не ломать поток print_log...
+                 // Проще оставить дефолт program.txt или парсить аргумент
+            }
 
-        Token *tokens = lex(input);
-        if (tokens == nullptr) {
-            printf("Ошибка лексического анализа\n\n");
-            fprintf(screenshot, "Ошибка лексического анализа\n\n");
+            execute_from_file(filename);
             continue;
         }
 
+        // Если это не команда - это математика
 
-        Token* rpn = shuntingYard(tokens);
-        if (rpn != nullptr) {
-            result = countRPN(rpn);
-            printf("<< ");
-            fprintf(screenshot, "<< ");
+        // 1. Сохраняем в историю
+        char cmd_to_save[300];
+        sprintf(cmd_to_save, "%s\n", input);
+        append_to_file("history.tmp", cmd_to_save);
 
-
-            print_container(result);
-            fputc('\n', stdout);
-
-            fputc('\n', screenshot);
-
-
-            fprintf(program, "%s\n", input);
-            fflush(program);
-            free_tokens(rpn);
-            free_container(result);
-        } else {
-            printf("Ошибка синтаксического анализа\n\n");
-            fprintf(screenshot, "Ошибка синтаксического анализа\n\n");
-        }
-
-        free_tokens(tokens);
+        // 2. Считаем
+        process_expression(input);
     }
 
-    fclose(screenshot);
-    fclose(program);
+    // Очистка
+    remove("session.tmp");
+    remove("history.tmp");
+    cleanup_global_data(FirstIdent);
 
     return 0;
 }

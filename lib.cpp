@@ -4,7 +4,6 @@
 
 
 
-
 void cleanup_global_data(Ident* FirstIdent) {
 
     Ident* current = FirstIdent;

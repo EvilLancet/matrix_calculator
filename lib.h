@@ -7,6 +7,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdarg.h>
 
 typedef enum {
     TOK_EOF,        // Конец входного потока
@@ -42,8 +43,8 @@ typedef enum
 typedef struct Container {
     ContainerType type;
     void *data;
-    void (*free_func)(void*);     
-    void (*print_func)(void*);    
+    void (*free_func)(void*);
+    void (*print_func)(void*);
 } Container;
 
 typedef struct {
@@ -91,12 +92,19 @@ typedef struct {
     MathFunction func;
 } FunctionDef;
 
+
+void clear_file(const char* filename);
+void copy_file(const char* src_name, const char* dst_name);
+void append_to_file(const char* filename, const char* text);
+void process_expression(char* input);
+
+void print_log(const char* format, ...);
 void cleanup_global_data(Ident* FirstIdent);
 
 Token* shuntingYard(Token* tokens);
 Container* countRPN(Token *head);
 
-void execute_from_program_txt(FILE* program_file, FILE* screenshot_file);
+void execute_from_file(const char* filename);
 void copy_file(const char* source, const char* destination);
 
 Token *lex(const char *input);

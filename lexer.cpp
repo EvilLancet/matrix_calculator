@@ -39,11 +39,8 @@ char *read_identifier() {
 
 
 int is_unary_minus(Token *last_token) {
-    
-    
-    
-    
-    if (last_token == nullptr) {
+
+if (last_token == nullptr) {
         return 1;
     }
 
@@ -78,7 +75,7 @@ Token *lex(const char *input) {
 
         if (current == '\0') break;
 
-        
+
         if (isdigit((unsigned char)current)) {
             char *number = read_number();
             Token *token = create_number_token(number);
@@ -88,18 +85,18 @@ Token *lex(const char *input) {
             continue;
         }
 
-        
+
         if (isalpha((unsigned char)current) || current == '_') {
             char *ident = read_identifier();
 
-            
+
             int is_func = 0;
             int next_pos = pos;
             skip_whitespace();
             if (src[pos] == '(') {
                 is_func = 1;
             }
-            pos = next_pos; 
+            pos = next_pos;
 
             Token *token = create_token(is_func ? TOK_FUNCTION : TOK_IDENT, ident);
             add_token(&head, &tail, token);
@@ -108,12 +105,12 @@ Token *lex(const char *input) {
             continue;
         }
 
-        
+
         Token *token = nullptr;
         switch (current) {
             case '+': token = create_token(TOK_PLUS, "+"); break;
             case '-':
-                
+
                 if (is_unary_minus(last_token)) {
                     token = create_token(TOK_UMINUS, "u-");
                 } else {
@@ -139,9 +136,49 @@ Token *lex(const char *input) {
         pos++;
     }
 
-    
+
     Token *eof = create_token(TOK_EOF, "EOF");
     add_token(&head, &tail, eof);
 
     return head;
+}
+
+
+// Эта функция принимает строку, считает её и пишет результат через print_log
+void process_expression(char* input) {
+    // 1. Лексический анализ
+    Token *tokens = lex(input);
+    if (tokens == NULL) {
+        print_log("Ошибка лексического анализа\n\n");
+        return;
+    }
+
+    // 2. Сортировочная станция
+    Token* rpn = shuntingYard(tokens);
+    if (rpn != NULL) {
+        // 3. Вычисление
+        Container* result = countRPN(rpn);
+
+        print_log("<< ");
+
+        // ВАЖНО: print_container должен использовать print_log внутри себя!
+        // Если вы еще не переделали print_container, раскомментируйте строки ниже:
+        /*
+        print_container(result); // вывод на экран
+        char temp_buf[256];
+        // Тут сложная логика записи контейнера в файл,
+        // лучше просто замените printf на print_log внутри print_container.
+        */
+        print_container(result);
+
+        print_log("\n\n");
+
+        free_container(result);
+        free_tokens(rpn);
+    } else {
+        // Ошибки синтаксиса (shuntingYard сам должен писать ошибки через print_log)
+        print_log("Ошибка синтаксического анализа\n\n");
+    }
+
+    free_tokens(tokens);
 }
