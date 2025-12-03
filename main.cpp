@@ -333,93 +333,6 @@ Token* shuntingYard(Token* tokens) {
     return output_front;
 }
 
-Token* shuntingYard2(Token* tokens) {
-    Token* output_front = NULL;
-    Token* output_rear = NULL;
-    Token* stack_top = NULL;
-
-    Token* current = tokens;
-    while (current && current->type != TOK_EOF) {
-        switch (current->type) {
-            case TOK_NUMBER:
-            case TOK_IDENT:
-
-                enqueue(&output_front, &output_rear, copy_token(current));
-                break;
-
-            case TOK_FUNCTION:
-
-                push_to_stack(&stack_top, copy_token(current));
-                break;
-
-            case TOK_COMMA:
-
-                process_comma(&stack_top, &output_front, &output_rear);
-                break;
-
-            case TOK_LBRACKET:
-
-                push_to_stack(&stack_top, copy_token(current));
-                break;
-
-            case TOK_LPAREN:
-
-                push_to_stack(&stack_top, copy_token(current));
-                break;
-
-            case TOK_RBRACKET:
-
-                process_vector_end(&stack_top, &output_front, &output_rear);
-                break;
-
-            case TOK_RPAREN:
-
-                process_parenthesis(&stack_top, &output_front, &output_rear);
-                break;
-
-            case TOK_PLUS:
-            case TOK_MINUS:
-            case TOK_MULTIPLY:
-            case TOK_DIVIDE:
-            case TOK_UMINUS:
-            case TOK_ASSIGN:
-                {
-                    int current_priority = get_priority(current->type);
-
-                    while (stack_top != nullptr &&
-                           get_priority(stack_top->type) >= current_priority &&
-                           stack_top->type != TOK_LPAREN) {
-                        Token* op = pop_from_stack(&stack_top);
-                        enqueue(&output_front, &output_rear, op);
-                    }
-
-                    push_to_stack(&stack_top, create_token(current->type, current->value));
-                }
-                break;
-
-            default:
-
-                break;
-        }
-        current = current->next;
-    }
-
-
-    while (stack_top) {
-        Token* op = pop_from_stack(&stack_top);
-
-
-        if (op->type == TOK_LPAREN || op->type == TOK_LBRACKET) {
-            printf("Ошибка: несогласованные скобки\n");
-            free_token(op);
-        } else {
-            enqueue(&output_front, &output_rear, op);
-        }
-    }
-
-    return output_front;
-}
-
 
 
 Container* container_vector(Container* a, Container* b, Container* c) {
@@ -476,7 +389,7 @@ Container* countRPN(Token *head)
             case TOK_FUNCTION: {
             FunctionDef* func_def = find_function(current->value);
             if (!func_def) {
-                printf("Неизвестная функция: %s\n", current->value);
+                print_log("Неизвестная функция: %s\n", current->value);
                 return NULL;
             }
 
@@ -492,7 +405,7 @@ Container* countRPN(Token *head)
             free(args);
 
             if (!result) {
-                printf("Ошибка в функции %s\n", current->value);
+                print_log("Ошибка в функции %s\n", current->value);
                 return NULL;
             }
 
@@ -503,14 +416,14 @@ Container* countRPN(Token *head)
             case TOK_ASSIGN: {
 
                 if (!stack_top || !stack_top->next) {
-                    printf("Ошибка: недостаточно операндов для =\n");
+                    print_log("Ошибка: недостаточно операндов для =\n");
                     return NULL;
                 }
                 Token* value = pop_from_stack(&stack_top);
                 Token* ident = pop_from_stack(&stack_top);
 
                 if (ident->type != TOK_IDENT) {
-                    printf("Ошибка: слева от = должен быть идентификатор\n");
+                    print_log("Ошибка: слева от = должен быть идентификатор\n");
                     free_token(ident);
                     free_token(value);
                     return NULL;
@@ -520,7 +433,7 @@ Container* countRPN(Token *head)
                     Ident* value_ident = find_ident(FirstIdent, value->value);
                     if(!value_ident)
                     {
-                        printf("Ошибка: переменная %s не существует\n", value->value);
+                        print_log("Ошибка: переменная %s не существует\n", value->value);
                         free_token(ident);
                         free_token(value);
                         return NULL;
@@ -619,9 +532,10 @@ char *program_bu = "program.bu";
 char *program = "program.txt";
 
 
-void print_help(FILE* screenshot_file) {
+void print_help() {
     const char* help_text =
-        "================ СПРАВКА ПО КАЛЬКУЛЯТОРУ ================\n"
+
+        "________________ СПРАВКА ПО КАЛЬКУЛЯТОРУ ________________\n"
         "\n"
         "КАК ПОЛЬЗОВАТЬСЯ:\n"
         "  Просто введите выражение и нажмите Enter.\n"
@@ -654,28 +568,103 @@ void print_help(FILE* screenshot_file) {
         "  >> sin(pi / 2)\n"
         "  >> vec1 = [1, 0, 0]\n"
         "  >> cross(vec1, [0, 1, 0])\n"
-        "=========================================================\n";
+        "_________________________________________________________\n";
 
-    printf("%s", help_text);
-    fprintf(screenshot_file, "%s", help_text);
+    print_log("%s",help_text);
 }
 
 
 void print_welcome_message()
 {
     const char* welcome_msg =
-        "==========================================================\n"
-        "   Консольный Калькулятор (Числа, Векторы, Переменные)    \n"
-        "==========================================================\n"
+        "_________________________________________________________\n"
+        "        _    _                 __                        \n"
+        "        |   /                /    )         /            \n"
+        "        |  /     __    __   /         __   /    __       \n"
+        "        | /    /___) /   ' /        /   ) /   /   '      \n"
+        "________|/____(___ _(___ _(____/___(___(_/___(___ _______\n"
+        "                                                         \n"
+        "   Консольный Калькулятор (Числа, Векторы, Переменные)   \n"
+        "_________________________________________________________\n"
         "Введите математическое выражение и нажмите Enter.\n"
         "Примеры:  2 + 2 * 2  |  x = sin(0.5)  |  v = [1, 2, 3]\n"
         "\n"
-        "Введите 'help' для полного списка команд и примеров.\n"
-        "Введите 'exit' для выхода.\n"
+        "Введите help для полного списка команд и примеров.\n"
+        "Введите exit для выхода.\n"
         "----------------------------------------------------------\n";
 
     print_log("%s", welcome_msg);
 }
+
+
+
+void update_ans(Container* result) {
+    if (!result) return;
+
+    Container* copy = container_deep_copy(result);
+    if (!copy) return;
+
+    // 2. Оборачиваем контейнер в Токен, так как переменные хранят Токены
+    // Используем TOK_NUMBER, так как это уже вычисленное значение
+    Token* token_val = create_token_with_container(TOK_NUMBER, NULL, copy);
+
+    // 3. Ищем переменную ans
+    Ident* ans_ident = find_ident(FirstIdent, "ans");
+
+    if (ans_ident) {
+        // Если переменная уже есть — обновляем её значение
+        if (ans_ident->value) {
+            free_token(ans_ident->value); // Освобождаем старый токен/контейнер
+        }
+        ans_ident->value = token_val;
+    } else {
+        // Если переменной нет — создаем новую
+        Ident* new_ident = create_ident("ans", token_val);
+        add_ident(&FirstIdent, new_ident);
+    }
+}
+
+
+// Эта функция принимает строку, считает её и пишет результат через print_log
+void process_expression(char* input) {
+    // 1. Лексический анализ
+    Token *tokens = lex(input);
+    if (tokens == NULL) {
+        print_log("Ошибка лексического анализа\n\n");
+        return;
+    }
+
+    // 2. Сортировочная станция
+    Token* rpn = shuntingYard(tokens);
+    if (rpn != NULL) {
+        // 3. Вычисление
+        Container* result = countRPN(rpn);
+
+        print_log("<< ");
+
+        // ВАЖНО: print_container должен использовать print_log внутри себя!
+        // Если вы еще не переделали print_container, раскомментируйте строки ниже:
+        /*
+        print_container(result); // вывод на экран
+        char temp_buf[256];
+        // Тут сложная логика записи контейнера в файл,
+        // лучше просто замените printf на print_log внутри print_container.
+        */
+        update_ans(result);
+        print_container(result);
+
+        print_log("\n");
+
+        free_container(result);
+        free_tokens(rpn);
+    } else {
+        // Ошибки синтаксиса (shuntingYard сам должен писать ошибки через print_log)
+        print_log("Ошибка синтаксического анализа\n\n");
+    }
+
+    free_tokens(tokens);
+}
+
 
 int main() {
     SetConsoleCP(1251);
@@ -719,7 +708,7 @@ int main() {
         }
 
         if (strcmp(input, "help") == 0) {
-            print_help(NULL); // print_help должна использовать print_log
+            print_help(); // print_help должна использовать print_log
             continue;
         }
 

@@ -1,16 +1,16 @@
 #include "lib.h"
 
-// РЈРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РїСЂРёРЅС‚РµСЂ: РїРёС€РµС‚ Рё РІ РєРѕРЅСЃРѕР»СЊ, Рё РІ session.tmp
+// Универсальный принтер: пишет и в консоль, и в session.tmp
 void print_log(const char* format, ...)
 {
     va_list args;
 
-    // 1. Р’С‹РІРѕРґ РЅР° СЌРєСЂР°РЅ
+    // 1. Вывод на экран
     va_start(args, format);
     vprintf(format, args);
     va_end(args);
 
-    // 2. Р’С‹РІРѕРґ РІ С„Р°Р№Р»
+    // 2. Вывод в файл
     FILE* f = fopen("session.tmp", "a");
     if (f) {
         va_start(args, format);
@@ -21,25 +21,25 @@ void print_log(const char* format, ...)
 }
 
 
-// Р¤СѓРЅРєС†РёСЏ 1: Р”РѕРїРёСЃР°С‚СЊ СЃС‚СЂРѕРєСѓ РІ РєРѕРЅРµС† С„Р°Р№Р»Р°
+// Функция 1: Дописать строку в конец файла
 void append_to_file(const char* filename, const char* text) {
-    FILE* f = fopen(filename, "a"); // "a" = append (РґРѕРїРёСЃР°С‚СЊ)
+    FILE* f = fopen(filename, "a"); // "a" = append (дописать)
     if (f) {
         fprintf(f, "%s", text);
-        fclose(f); // РЎСЂР°Р·Сѓ Р·Р°РєСЂС‹РІР°РµРј!
+        fclose(f); // Сразу закрываем!
     }
 }
 
-// Р¤СѓРЅРєС†РёСЏ 2: РЎРєРѕРїРёСЂРѕРІР°С‚СЊ РѕРґРёРЅ С„Р°Р№Р» РІ РґСЂСѓРіРѕР№ (РґР»СЏ РєРѕРјР°РЅРґ save/screen)
+// Функция 2: Скопировать один файл в другой (для команд save/screen)
 void copy_file(const char* src_name, const char* dst_name) {
     FILE* src = fopen(src_name, "r");
     if (!src) {
-        printf("РќРµС‡РµРіРѕ СЃРѕС…СЂР°РЅСЏС‚СЊ (С„Р°Р№Р» %s РїСѓСЃС‚).\n", src_name);
+        printf("Нечего сохранять (файл %s пуст).\n", src_name);
         return;
     }
     FILE* dst = fopen(dst_name, "w");
     if (!dst) {
-        printf("РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ С„Р°Р№Р»Р° %s\n", dst_name);
+        printf("Ошибка создания файла %s\n", dst_name);
         fclose(src);
         return;
     }
@@ -51,11 +51,11 @@ void copy_file(const char* src_name, const char* dst_name) {
 
     fclose(src);
     fclose(dst);
-    printf("Р¤Р°Р№Р» СЃРѕС…СЂР°РЅРµРЅ: %s\n", dst_name);
+    printf("Файл сохранен: %s\n", dst_name);
 }
 
-// Р¤СѓРЅРєС†РёСЏ 3: РћС‡РёСЃС‚РёС‚СЊ С„Р°Р№Р» (РїСЂРё Р·Р°РїСѓСЃРєРµ РёР»Рё cls)
+// Функция 3: Очистить файл (при запуске или cls)
 void clear_file(const char* filename) {
-    FILE* f = fopen(filename, "w"); // "w" РїРµСЂРµР·Р°РїРёСЃС‹РІР°РµС‚ С„Р°Р№Р» РїСѓСЃС‚С‹Рј
+    FILE* f = fopen(filename, "w"); // "w" перезаписывает файл пустым
     if (f) fclose(f);
 }

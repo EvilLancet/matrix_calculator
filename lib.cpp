@@ -1,7 +1,15 @@
 #include "lib.h"
 
+void print_smart_double(double value) {
+    double int_part;
+    if (fabs(modf(value, &int_part)) < 1e-9) {
 
+        print_log("%.0f", value);
+    } else {
 
+        print_log("%g", value);
+    }
+}
 
 
 void cleanup_global_data(Ident* FirstIdent) {
@@ -115,31 +123,37 @@ void free_vector_container(void *data) {
 void print_int_container(void *data) {
     if (data) {
         IntContainer *ic = (IntContainer*)data;
-        printf("%d", ic->value);
+        print_log("%d", ic->value);
     }
 }
 
 void print_float_container(void *data) {
     if (data) {
         FloatContainer *fc = (FloatContainer*)data;
-        printf("%.6f", fc->value);
+        // Используем умный вывод вместо жесткого %.6f
+        print_smart_double(fc->value);
     }
 }
 
 void print_string_container(void *data) {
     if (data) {
         StringContainer *sc = (StringContainer*)data;
-        printf("%s", sc->value);
+        print_log("%s", sc->value);
     }
 }
 
 void print_vector_container(void *data) {
     if (data) {
         VectorContainer *vc = (VectorContainer*)data;
-        printf("[%.6f, %.6f, %.6f]", vc->x, vc->y, vc->z);
+        print_log("[");
+        print_smart_double(vc->x);
+        print_log(", ");
+        print_smart_double(vc->y);
+        print_log(", ");
+        print_smart_double(vc->z);
+        print_log("]");
     }
 }
-
 
 Container* create_int_container(int value) {
     Container *container = (Container*)malloc(sizeof(Container));
@@ -420,19 +434,19 @@ Token *copy_token(const Token *src) {
 
 void print_token(const Token *token) {
     if (token == NULL) {
-        printf("NULL_TOKEN");
+        print_log("NULL_TOKEN");
         return;
     }
 
-    printf("Token{type=%d, container=", token->type);
+    print_log("Token{type=%d, container=", token->type);
 
     if (token->container) {
         print_container(token->container);
     } else {
-        printf("NULL");
+        print_log("NULL");
     }
 
-    printf("}\n");
+    print_log("}\n");
 }
 
 
@@ -545,12 +559,12 @@ Container* sin_func(Container** args, int arg_count) {
 
 Container* cos_func(Container** args, int arg_count) {
     if (arg_count != 1) {
-        printf("cos: ожидается 1 аргумент\n");
+        print_log("cos: ожидается 1 аргумент\n");
         return NULL;
     }
     if (!args[0]) return NULL;
     if (args[0]->type != CT_INT && args[0]->type != CT_FLOAT) {
-        printf("cos: аргумент должен быть числом\n");
+        print_log("cos: аргумент должен быть числом\n");
         return NULL;
     }
 
@@ -560,18 +574,18 @@ Container* cos_func(Container** args, int arg_count) {
 
 Container* log_func(Container** args, int arg_count) {
     if (arg_count != 1) {
-        printf("log: ожидается 1 аргумент\n");
+        print_log("log: ожидается 1 аргумент\n");
         return NULL;
     }
     if (!args[0]) return NULL;
     if (args[0]->type != CT_INT && args[0]->type != CT_FLOAT) {
-        printf("log: аргумент должен быть числом\n");
+        print_log("log: аргумент должен быть числом\n");
         return NULL;
     }
 
     double value = container_to_double(args[0]);
     if (value <= 0) {
-        printf("log: аргумент должен быть положительным\n");
+        print_log("log: аргумент должен быть положительным\n");
         return NULL;
     }
     return create_float_container(log(value));
@@ -579,13 +593,13 @@ Container* log_func(Container** args, int arg_count) {
 
 Container* pow_func(Container** args, int arg_count) {
     if (arg_count != 2) {
-        printf("pow: ожидается 2 аргумента\n");
+        print_log("pow: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) return NULL;
     if ((args[0]->type != CT_INT && args[0]->type != CT_FLOAT) ||
         (args[1]->type != CT_INT && args[1]->type != CT_FLOAT)) {
-        printf("pow: аргументы должны быть числами\n");
+        print_log("pow: аргументы должны быть числами\n");
         return NULL;
     }
 
@@ -593,7 +607,7 @@ Container* pow_func(Container** args, int arg_count) {
     double exponent = container_to_double(args[1]);
 
     if (base == 0 && exponent < 0) {
-        printf("pow: деление на ноль\n");
+        print_log("pow: деление на ноль\n");
         return NULL;
     }
     return create_float_container(pow(base, exponent));
@@ -601,13 +615,13 @@ Container* pow_func(Container** args, int arg_count) {
 
 Container* max_func(Container* args[], int arg_count) {
     if (arg_count != 2) {
-        printf("max: ожидается 2 аргумента\n");
+        print_log("max: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) return NULL;
     if ((args[0]->type != CT_INT && args[0]->type != CT_FLOAT) ||
         (args[1]->type != CT_INT && args[1]->type != CT_FLOAT)) {
-        printf("max: аргументы должны быть числами\n");
+        print_log("max: аргументы должны быть числами\n");
         return NULL;
     }
 
@@ -618,12 +632,12 @@ Container* max_func(Container* args[], int arg_count) {
 
 Container* cross_func(Container** args, int arg_count) {
     if (arg_count != 2) {
-        printf("cross: ожидается 2 аргумента\n");
+        print_log("cross: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) return NULL;
     if (args[0]->type != CT_VECTOR || args[1]->type != CT_VECTOR) {
-        printf("cross: оба аргумента должны быть векторами\n");
+        print_log("cross: оба аргумента должны быть векторами\n");
         return NULL;
     }
 
@@ -641,7 +655,7 @@ Container* cross_func(Container** args, int arg_count) {
 Container* abs_func(Container** args, int arg_count)
 {
     if (arg_count != 1) {
-        printf("length: ожидается 1 аргумент\n");
+        print_log("length: ожидается 1 аргумент\n");
         return NULL;
     }
     if (!args[0]) return NULL;
@@ -653,7 +667,7 @@ Container* abs_func(Container** args, int arg_count)
     }
 
     if (args[0]->type != CT_VECTOR) {
-        printf("length: аргумент должен быть вектором\n");
+        print_log("length: аргумент должен быть вектором\n");
         return NULL;
     }
 
@@ -667,11 +681,11 @@ Container* abs_func(Container** args, int arg_count)
 Container* sub_func(Container** args, int arg_count)
 {
     if (arg_count != 2) {
-        printf("Вычитание: ожидается 2 аргумента\n");
+        print_log("Вычитание: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) {
-        printf("Вычитание: аргументы не могут быть NULL\n");
+        print_log("Вычитание: аргументы не могут быть NULL\n");
         return NULL;
     }
 
@@ -692,17 +706,17 @@ Container* sub_func(Container** args, int arg_count)
         return create_vector_container(va->x - vb->x, va->y - vb->y, va->z - vb->z);
     }
 
-    printf("Ошибка: несовместимые типы для вычитания\n");
+    print_log("Ошибка: несовместимые типы для вычитания\n");
     return NULL;
 }
 
 Container* add_func(Container** args, int arg_count) {
     if (arg_count != 2) {
-        printf("Сложение: ожидается 2 аргумента\n");
+        print_log("Сложение: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) {
-        printf("Сложение: аргументы не могут быть NULL\n");
+        print_log("Сложение: аргументы не могут быть NULL\n");
         return NULL;
     }
 
@@ -723,18 +737,18 @@ Container* add_func(Container** args, int arg_count) {
         return create_vector_container(va->x + vb->x, va->y + vb->y, va->z + vb->z);
     }
 
-    printf("Ошибка: несовместимые типы для сложения\n");
+    print_log("Ошибка: несовместимые типы для сложения\n");
     return NULL;
 }
 
 
 Container* neg_func(Container** args, int arg_count) {
     if (arg_count != 1) {
-        printf("Унарный минус: ожидается 1 аргумент\n");
+        print_log("Унарный минус: ожидается 1 аргумент\n");
         return NULL;
     }
     if (!args[0]) {
-        printf("Унарный минус: аргумент не может быть NULL\n");
+        print_log("Унарный минус: аргумент не может быть NULL\n");
         return NULL;
     }
 
@@ -754,18 +768,18 @@ Container* neg_func(Container** args, int arg_count) {
             return create_vector_container(-vc->x, -vc->y, -vc->z);
         }
         default:
-            printf("Ошибка: унарный минус не применим к данному типу\n");
+            print_log("Ошибка: унарный минус не применим к данному типу\n");
             return NULL;
     }
 }
 
 Container* div_func(Container** args, int arg_count) {
     if (arg_count != 2) {
-        printf("Деление: ожидается 2 аргумента\n");
+        print_log("Деление: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) {
-        printf("Деление: аргументы не могут быть NULL\n");
+        print_log("Деление: аргументы не могут быть NULL\n");
         return NULL;
     }
 
@@ -777,7 +791,7 @@ Container* div_func(Container** args, int arg_count) {
         (b->type == CT_INT || b->type == CT_FLOAT)) {
         double divisor = container_to_double(b);
         if (divisor == 0.0) {
-            printf("Ошибка: деление на ноль\n");
+            print_log("Ошибка: деление на ноль\n");
             return NULL;
         }
         double result = container_to_double(a) / divisor;
@@ -788,24 +802,24 @@ Container* div_func(Container** args, int arg_count) {
     if (a->type == CT_VECTOR && (b->type == CT_INT || b->type == CT_FLOAT)) {
         double divisor = container_to_double(b);
         if (divisor == 0.0) {
-            printf("Ошибка: деление на ноль\n");
+            print_log("Ошибка: деление на ноль\n");
             return NULL;
         }
         VectorContainer* va = (VectorContainer*)a->data;
         return create_vector_container(va->x / divisor, va->y / divisor, va->z / divisor);
     }
 
-    printf("Ошибка: несовместимые типы для деления\n");
+    print_log("Ошибка: несовместимые типы для деления\n");
     return NULL;
 }
 
 Container* mul_func(Container** args, int arg_count) {
     if (arg_count != 2) {
-        printf("Умножение: ожидается 2 аргумента\n");
+        print_log("Умножение: ожидается 2 аргумента\n");
         return NULL;
     }
     if (!args[0] || !args[1]) {
-        printf("Умножение: аргументы не могут быть NULL\n");
+        print_log("Умножение: аргументы не могут быть NULL\n");
         return NULL;
     }
 
@@ -840,7 +854,7 @@ Container* mul_func(Container** args, int arg_count) {
         return create_float_container(va->x * vb->x + va->y * vb->y + va->z * vb->z);
     }
 
-    printf("Ошибка: несовместимые типы для умножения\n");
+    print_log("Ошибка: несовместимые типы для умножения\n");
     return NULL;
 }
 

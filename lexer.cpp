@@ -111,7 +111,7 @@ Token *lex(const char *input) {
             case '+': token = create_token(TOK_PLUS, "+"); break;
             case '-':
 
-                if (is_unary_minus(last_token)) {
+                if (is_unary_minus(last_token) && false) {
                     token = create_token(TOK_UMINUS, "u-");
                 } else {
                     token = create_token(TOK_MINUS, "-");
@@ -144,41 +144,3 @@ Token *lex(const char *input) {
 }
 
 
-// Эта функция принимает строку, считает её и пишет результат через print_log
-void process_expression(char* input) {
-    // 1. Лексический анализ
-    Token *tokens = lex(input);
-    if (tokens == NULL) {
-        print_log("Ошибка лексического анализа\n\n");
-        return;
-    }
-
-    // 2. Сортировочная станция
-    Token* rpn = shuntingYard(tokens);
-    if (rpn != NULL) {
-        // 3. Вычисление
-        Container* result = countRPN(rpn);
-
-        print_log("<< ");
-
-        // ВАЖНО: print_container должен использовать print_log внутри себя!
-        // Если вы еще не переделали print_container, раскомментируйте строки ниже:
-        /*
-        print_container(result); // вывод на экран
-        char temp_buf[256];
-        // Тут сложная логика записи контейнера в файл,
-        // лучше просто замените printf на print_log внутри print_container.
-        */
-        print_container(result);
-
-        print_log("\n\n");
-
-        free_container(result);
-        free_tokens(rpn);
-    } else {
-        // Ошибки синтаксиса (shuntingYard сам должен писать ошибки через print_log)
-        print_log("Ошибка синтаксического анализа\n\n");
-    }
-
-    free_tokens(tokens);
-}
