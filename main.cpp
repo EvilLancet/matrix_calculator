@@ -691,7 +691,22 @@ int main() {
         if (strlen(input) == 0) continue;
 
         // Обработка системных команд
-        if (strcmp(input, "exit") == 0) break;
+        if (strcmp(input, "exit") == 0)
+        {
+            printf("Вы уверены, что хотите выйти? (y/n): ");
+            char confirm;
+            scanf(" %c", &confirm);
+            while (getchar() != '\n'); // Очистка буфера
+
+            // Выходим ТОЛЬКО если y или Y
+            if (confirm == 'y' || confirm == 'Y') {
+                break;
+            } else {
+
+                printf("Выход отменен.\n");
+                continue;
+            }
+        }
 
         if (strcmp(input, "save") == 0) {
             copy_file("history.tmp", "program.txt");
