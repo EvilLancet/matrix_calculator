@@ -2,9 +2,10 @@
 
 
 
-
+// Глобальный список переменных
 Ident* FirstIdent;
 
+// Таблица поддерживаемых функций и количество их аргументов
 FunctionDef functions[14] = {
     {"sin",   1, sin_func  },
     {"cos",   1, cos_func  },
@@ -21,6 +22,7 @@ FunctionDef functions[14] = {
     {NULL,    0, NULL}
 };
 
+// Линейный поиск функции по имени в таблице
 FunctionDef* find_function(const char* name) {
     for (FunctionDef* f = functions; f->name; f++) {
         if (strcmp(f->name, name) == 0) return f;
@@ -28,6 +30,7 @@ FunctionDef* find_function(const char* name) {
     return NULL;
 }
 
+// Подсчет элементов в стеке
 int stack_size(Token* stack_top)
 {
     int count = 0;
@@ -37,6 +40,7 @@ int stack_size(Token* stack_top)
     return count;
 }
 
+// Безопасное извлечение N аргументов из стека
 Container** extract_args_safely(Token** stack, int arg_count, const char* func_name) {
     if (stack_size(*stack) < arg_count) {
         printf("Недостаточно аргументов для %s (нужно %d)\n", func_name, arg_count);
@@ -64,29 +68,32 @@ Container** extract_args_safely(Token** stack, int arg_count, const char* func_n
 }
 
 
+// Получение контейнера из токена
 Container* get_container(Token* token)
 {
     if(token->type == TOK_IDENT)
     {
+        // Если это переменная, ищем её значение в глобальном списке
         Ident* existing = find_ident(FirstIdent, token->value);
         if (existing) {
-
+            // Делаем копию, чтобы не повредить переменную
             return container_deep_copy(existing->value->container);
         } else {
+            print_log("Ошибка: переменная %s не существует\n", token->value);
             return NULL;
         }
     }
     else
     {
         Container* container = token->container;
+        // Отвязываем контейнер от токена
         token->container = nullptr;
         return container;
     }
 }
 
 
-
-
+// Определение приоритета операторов для сортировочной станции
 int get_priority(TokenT type) {
     switch (type) {
         case TOK_PLUS:
@@ -104,13 +111,14 @@ int get_priority(TokenT type) {
     }
 }
 
+// Обработка запятой: выталкивание операторов до открывающей скобки
 int process_comma(Token** stack_top, Token** output_front, Token** output_rear) {
 
 
     while (*stack_top) {
         Token* top = *stack_top;
 
-
+        // Ищем границу текущего аргумента (скобку функции или вектора)
         if (top->type == TOK_LPAREN || top->type == TOK_LBRACKET) {
             break;
         }
@@ -120,7 +128,7 @@ int process_comma(Token** stack_top, Token** output_front, Token** output_rear) 
         enqueue(output_front, output_rear, op);
     }
 
-
+     // Если стек кончился, а скобки нет — ошибка парсинга
     if (!*stack_top ||
         ((*stack_top)->type != TOK_LPAREN && (*stack_top)->type != TOK_LBRACKET)) {
         printf("Ошибка: запятая находится вне скобок\n");
@@ -130,8 +138,11 @@ int process_comma(Token** stack_top, Token** output_front, Token** output_rear) 
     return true;
 }
 
+
+// Обработка закрывающей круглой скобки
 int process_parenthesis(Token** stack_top, Token** output_front, Token** output_rear) {
 
+    // Выталкиваем всё в выходную очередь до открывающей скобки
     while (*stack_top && (*stack_top)->type != TOK_LPAREN) {
         Token* op = pop_from_stack(stack_top);
         enqueue(output_front, output_rear, op);
@@ -143,11 +154,11 @@ int process_parenthesis(Token** stack_top, Token** output_front, Token** output_
         return false;
     }
 
-
+    // Удаляем открывающую скобку из стека
     Token* bracket = pop_from_stack(stack_top);
     free_token(bracket);
 
-
+    // Если перед скобкой была функция (например, sin(..)), отправляем её в выходную очередь
     if (*stack_top && (*stack_top)->type == TOK_FUNCTION) {
         Token* func = pop_from_stack(stack_top);
         enqueue(output_front, output_rear, func);
@@ -156,6 +167,7 @@ int process_parenthesis(Token** stack_top, Token** output_front, Token** output_
     return true;
 }
 
+// Обработка закрывающей квадратной скобки
 int process_vector_end(Token** stack_top, Token** output_front, Token** output_rear) {
 
     while (*stack_top && (*stack_top)->type != TOK_LBRACKET) {
@@ -174,17 +186,19 @@ int process_vector_end(Token** stack_top, Token** output_front, Token** output_r
     free_token(bracket);
 
 
-
+    // Генерируем специальный оператор TOK_VECTOR, который скажет вычислителю создать вектор
     Token* vector_op = create_token(TOK_VECTOR, "VECTOR");
     enqueue(output_front, output_rear, vector_op);
     return true;
 }
+
+// Алгоритм сортировочной станции
 Token* shuntingYard(Token* tokens) {
     Token* output_front = NULL;
     Token* output_rear = NULL;
     Token* stack_top = NULL;
 
-    // Флаг состояния: 1 - ждем операнд (число/func/(), 0 - ждем оператор
+    // Флаг состояния: 1 - ждем операнд, 0 - ждем оператор
     int expect_operand = 1;
 
     Token* current = tokens;
@@ -192,7 +206,7 @@ Token* shuntingYard(Token* tokens) {
         switch (current->type) {
             case TOK_NUMBER:
             case TOK_IDENT:
-                // ПРОВЕРКА 1: Два числа подряд [2 1] или (5) 5
+                // Проверка двух чисел подряд
                 if (!expect_operand) {
                     printf("Ошибка: Ожидался оператор или запятая, а встречено число/переменная '%s'\n", current->value);
                     return NULL; // Прерываем выполнение
@@ -203,7 +217,7 @@ Token* shuntingYard(Token* tokens) {
                 break;
 
             case TOK_FUNCTION:
-                // Функция может быть только там, где ожидается операнд (как число)
+                // Функция может быть только там, где ожидается операнд
                 if (!expect_operand) {
                     printf("Ошибка: Ожидался оператор, встречена функция '%s'\n", current->value);
                     return NULL;
@@ -224,21 +238,18 @@ Token* shuntingYard(Token* tokens) {
 
             case TOK_LBRACKET:
             case TOK_LPAREN:
-                // Открывающая скобка возможна:
-                // 1. В начале выражения/аргумента (expect_operand == 1)
-                // 2. После функции (expect_operand == 1, но тут тонкий момент, считаем что ок)
-                // Если expect_operand == 0, значит это "5 (2)", что является ошибкой (если нет неявного умножения)
+                 // Открывающая скобка возможна в начале выражения или после оператора/функции
                 if (!expect_operand) {
                     printf("Ошибка: Ожидался оператор перед скобкой\n");
                     return NULL;
                 }
 
                 push_to_stack(&stack_top, copy_token(current));
-                expect_operand = 1; // Внутри скобок ждем новое выражение (число)
+                expect_operand = 1; // Внутри скобок ждем новое выражение
                 break;
 
             case TOK_RBRACKET:
-                // Закрывать скобку можно только после полного выражения (числа)
+                // Закрывать скобку можно только после полного выражения
                 if (expect_operand) {
                     printf("Ошибка: Ожидалось значение перед ']'\n");
                     return NULL;
@@ -248,8 +259,7 @@ Token* shuntingYard(Token* tokens) {
                 break;
 
             case TOK_RPAREN:
-                // Закрывать скобку можно только после полного выражения
-                // Исключение: пустые скобки "()". Проверяем, что в стеке '('.
+                // Исключение: пустые скобки "()" допустимы только если в стеке '('
                 if (expect_operand) {
                      if (stack_top && stack_top->type == TOK_LPAREN) {
                          // Это пустые скобки, допустимо для функций без аргументов
@@ -269,14 +279,13 @@ Token* shuntingYard(Token* tokens) {
             case TOK_UMINUS:
             case TOK_ASSIGN:
                 {
-                    // === УНАРНЫЙ МИНУС ===
+                    // Если минус встречен там, где ждем число (начало строки или после скобки)
                     if (current->type == TOK_MINUS && expect_operand) {
                         push_to_stack(&stack_top, create_token(TOK_UMINUS, "u-"));
                         // expect_operand остается 1, ждем число
                     }
                     else {
-                        // === БИНАРНЫЕ ОПЕРАТОРЫ ===
-                        // Если ждали число, а пришел "+", значит "5 + * 2" или начало с "+" -> Ошибка
+
                         if (expect_operand) {
                             printf("Ошибка: Неожиданный оператор '%s' (нет левого операнда)\n", current->value);
                             return NULL;
@@ -285,6 +294,7 @@ Token* shuntingYard(Token* tokens) {
                         int current_priority = get_priority(current->type);
                         int is_right_assoc = (current->type == TOK_ASSIGN);
 
+                        // Выталкивание операторов с большим или равным приоритетом
                         while (stack_top != nullptr &&
                                stack_top->type != TOK_LPAREN &&
                                stack_top->type != TOK_LBRACKET) {
@@ -313,7 +323,7 @@ Token* shuntingYard(Token* tokens) {
         current = current->next;
     }
 
-    // В конце строки мы не должны ждать операнда (нельзя заканчивать на "+")
+    // В конце строки мы не должны ждать операнда
     if (expect_operand) {
         printf("Ошибка: Выражение закончилось неожиданно (ожидался операнд)\n");
         return NULL;
@@ -334,7 +344,7 @@ Token* shuntingYard(Token* tokens) {
 }
 
 
-
+// Создание вектора из 3 компонентов
 Container* container_vector(Container* a, Container* b, Container* c) {
     if (!a || !b || !c) return NULL;
 
@@ -348,7 +358,7 @@ Container* container_vector(Container* a, Container* b, Container* c) {
     return NULL;
 }
 
-
+// Вычисление выражения в Обратной Польской Записи
 Container* countRPN(Token *head)
 {
     Token* stack_top = NULL;
@@ -358,6 +368,7 @@ Container* countRPN(Token *head)
 
         switch (current->type) {
             case TOK_VECTOR:{
+                // Сборка вектора из 3 чисел на стеке
                 Container** args = extract_args_safely(&stack_top, 3, current->value);
                 if (!args) return NULL;
 
@@ -365,7 +376,7 @@ Container* countRPN(Token *head)
                 Token* result_token = create_token_with_container(TOK_NUMBER, NULL, result);
                 push_to_stack(&stack_top, result_token);
 
-
+                // Очистка временных аргументов
                 for(int i(0); i<3; i++)
                 {
                     if(args[i]) free_container(args[i]);
@@ -377,7 +388,7 @@ Container* countRPN(Token *head)
             case TOK_NUMBER:
             case TOK_IDENT:
 
-
+                // Числа и переменные просто кладем в стек
                 push_to_stack(&stack_top, copy_token(current));
                 break;
 
@@ -387,6 +398,7 @@ Container* countRPN(Token *head)
             case TOK_PLUS:
             case TOK_MINUS:
             case TOK_FUNCTION: {
+            //Поиск функции
             FunctionDef* func_def = find_function(current->value);
             if (!func_def) {
                 print_log("Неизвестная функция: %s\n", current->value);
@@ -398,6 +410,7 @@ Container* countRPN(Token *head)
 
             Container* result = func_def->func(args, func_def->arg_count);
 
+            // Освобождение аргументов после вычисления
             for(int i(0); i<func_def->arg_count; i++)
             {
                 if(args[i]) free_container(args[i]);
@@ -409,6 +422,7 @@ Container* countRPN(Token *head)
                 return NULL;
             }
 
+            // Результат кладем обратно в стек
             push_to_stack(&stack_top, create_token_with_container(TOK_NUMBER, NULL, result));
             break;
             }
@@ -428,6 +442,7 @@ Container* countRPN(Token *head)
                     free_token(value);
                     return NULL;
                 }
+                // Если справа переменная, берем её значение
                 if(value->type == TOK_IDENT)
                 {
                     Ident* value_ident = find_ident(FirstIdent, value->value);
@@ -443,19 +458,19 @@ Container* countRPN(Token *head)
 
                 }
 
-
+                 // Поиск существующей переменной или создание новой
                 Ident* existing = find_ident(FirstIdent, ident->value);
                 if (existing) {
-
+                    // Обновление значения существующей переменной
                     free_token(existing->value);
                     existing->value = copy_token(value);
                 } else {
-
+                    // Создание новой переменной в списке
                     Ident* new_ident = create_ident(ident->value, copy_token(value));
                     add_ident(&FirstIdent, new_ident);
                 }
 
-
+                // Результат присваивания (значение) возвращается в стек
                 push_to_stack(&stack_top, value);
                 free_token(ident);
 
@@ -469,15 +484,16 @@ Container* countRPN(Token *head)
         current = current->next;
     }
 
-
+    // В конце вычисления в стеке должен остаться ровно один элемент
     if (!stack_top) {
         printf("Ошибка: пустой стек\n");
         return NULL;
     }
 
+
     if (stack_top->next) {
         printf("Ошибка: в стеке осталось несколько элементов\n");
-
+        // Очистка мусора при ошибке
         while (stack_top) {
             Token* temp = pop_from_stack(&stack_top);
             free_token(temp);
@@ -487,7 +503,7 @@ Container* countRPN(Token *head)
 
 
     Token* result_token = pop_from_stack(&stack_top);
-
+    // Извлечение контейнера из токена-результата
     Container* result = NULL;
     if (result_token) {
         result = get_container(result_token);
@@ -524,14 +540,7 @@ void print_rpn(Token* head) {
     printf("\n");
 }
 
-
-char *screenshot_bu = "screen.bu";
-char *screenshot = "screen.txt";
-
-char *program_bu = "program.bu";
-char *program = "program.txt";
-
-
+// Вывод справочной информации
 void print_help() {
     const char* help_text =
 
@@ -544,14 +553,15 @@ void print_help() {
         "УПРАВЛЕНИЕ ПРОГРАММОЙ:\n"
         "  save   - сохранить всю историю введенных команд в файл 'program.txt'\n"
         "  screen - сохранить текущий вид консоли в файл 'screenshot.txt'\n"
-        "  open   - загрузить и выполнить команды из файла 'program.txt'\n"
+        "  open   - загрузить и выполнить команды из файла, введенного через пробел\n"
         "  cls    - очистить экран\n"
         "  exit   - закрыть калькулятор\n"
-        "  help   - показать этот текст\n"
+        "  help   - показать справку по калькулятору\n"
         "\n"
         "МАТЕМАТИКА И ПЕРЕМЕННЫЕ:\n"
-        "  +, -, *, /  : Стандартные операции (сложение, вычитание, ...)\n"
+        "  +, -, *, /  : Стандартные операции (сложение, вычитание, умножение, деление)\n"
         "  =           : Запомнить число (пример: x = 5 + 2, теперь x равно 7)\n"
+        "  ans         : Хранит результат последнего вычисления (пример: ans + 10)\n"
         "  [a, b, c]   : Создать вектор из трех чисел (пример: v = [1, 2, 3])\n"
         "\n"
         "ФУНКЦИИ:\n"
@@ -574,6 +584,7 @@ void print_help() {
 }
 
 
+// Вывод приветствия при запуске
 void print_welcome_message()
 {
     const char* welcome_msg =
@@ -597,24 +608,22 @@ void print_welcome_message()
 }
 
 
-
+// Обновление переменной ans
 void update_ans(Container* result) {
     if (!result) return;
 
     Container* copy = container_deep_copy(result);
     if (!copy) return;
 
-    // 2. Оборачиваем контейнер в Токен, так как переменные хранят Токены
-    // Используем TOK_NUMBER, так как это уже вычисленное значение
     Token* token_val = create_token_with_container(TOK_NUMBER, NULL, copy);
 
-    // 3. Ищем переменную ans
+    //Ищем переменную ans
     Ident* ans_ident = find_ident(FirstIdent, "ans");
 
     if (ans_ident) {
         // Если переменная уже есть — обновляем её значение
         if (ans_ident->value) {
-            free_token(ans_ident->value); // Освобождаем старый токен/контейнер
+            free_token(ans_ident->value); // Освобождаем старый токен
         }
         ans_ident->value = token_val;
     } else {
@@ -625,31 +634,23 @@ void update_ans(Container* result) {
 }
 
 
-// Эта функция принимает строку, считает её и пишет результат через print_log
+// Полный цикл обработки одного выражения
 void process_expression(char* input) {
-    // 1. Лексический анализ
+    //Лексический анализ
     Token *tokens = lex(input);
     if (tokens == NULL) {
         print_log("Ошибка лексического анализа\n\n");
         return;
     }
 
-    // 2. Сортировочная станция
+    //Сортировочная станция
     Token* rpn = shuntingYard(tokens);
     if (rpn != NULL) {
-        // 3. Вычисление
+        // Вычисление
         Container* result = countRPN(rpn);
 
         print_log("<< ");
 
-        // ВАЖНО: print_container должен использовать print_log внутри себя!
-        // Если вы еще не переделали print_container, раскомментируйте строки ниже:
-        /*
-        print_container(result); // вывод на экран
-        char temp_buf[256];
-        // Тут сложная логика записи контейнера в файл,
-        // лучше просто замените printf на print_log внутри print_container.
-        */
         update_ans(result);
         print_container(result);
 
@@ -658,7 +659,6 @@ void process_expression(char* input) {
         free_container(result);
         free_tokens(rpn);
     } else {
-        // Ошибки синтаксиса (shuntingYard сам должен писать ошибки через print_log)
         print_log("Ошибка синтаксического анализа\n\n");
     }
 
@@ -670,25 +670,27 @@ int main() {
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
 
+    // Очистка временных файлов сессии
     clear_file("session.tmp");
     clear_file("history.tmp");
 
-    print_welcome_message(); // Ваша функция с print_log
+    print_welcome_message();
 
     char input[256];
 
+     // Основной цикл работы программы
     while (1) {
         print_log(">> ");
 
         if (fgets(input, sizeof(input), stdin) == NULL) break;
 
-        // Логируем ввод пользователя
+        // Логирование ввода пользователя
         append_to_file("session.tmp", input);
 
         input[strcspn(input, "\n")] = 0;
         if (strlen(input) == 0) continue;
 
-        // Обработка команд
+        // Обработка системных команд
         if (strcmp(input, "exit") == 0) break;
 
         if (strcmp(input, "save") == 0) {
@@ -714,37 +716,33 @@ int main() {
 
         // Обработка "open имя_файла"
         if (strncmp(input, "open", 4) == 0) {
-            // Если пользователь ввел просто "open", спрашиваем имя (как у вас было)
-            // Или парсим имя из строки "open file.txt"
+
             char filename[256] = "program.txt"; // Дефолтное имя
 
             // Простая логика: если есть пробел, берем то, что после него
             char* space = strchr(input, ' ');
             if (space != NULL && strlen(space + 1) > 0) {
                 strcpy(filename, space + 1);
-            } else {
-                 // Если преподаватель хочет ввод имени отдельно:
-                 print_log("Введите имя файла: ");
-                 // Тут нужен fgets, но чтобы не ломать поток print_log...
-                 // Проще оставить дефолт program.txt или парсить аргумент
+                execute_from_file(filename);
+            }
+            else
+            {
+                print_log("Ошибка: введите название файла через пробел\n");
+                print_log("Пример: open program.txt\n");
             }
 
-            execute_from_file(filename);
             continue;
         }
 
-        // Если это не команда - это математика
 
-        // 1. Сохраняем в историю
         char cmd_to_save[300];
         sprintf(cmd_to_save, "%s\n", input);
         append_to_file("history.tmp", cmd_to_save);
 
-        // 2. Считаем
         process_expression(input);
     }
 
-    // Очистка
+    // Очистка ресурсов перед выходом
     remove("session.tmp");
     remove("history.tmp");
     cleanup_global_data(FirstIdent);

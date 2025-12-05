@@ -1,7 +1,9 @@
 #include "lib.h"
 
+// Умный вывод числа: целые выводятся без дробной части
 void print_smart_double(double value) {
     double int_part;
+     // Проверка, является ли число целым (дробная часть близка к 0)
     if (fabs(modf(value, &int_part)) < 1e-9) {
 
         print_log("%.0f", value);
@@ -11,14 +13,14 @@ void print_smart_double(double value) {
     }
 }
 
-
+// Полная очистка списка переменных
 void cleanup_global_data(Ident* FirstIdent) {
 
     Ident* current = FirstIdent;
     while (current != NULL) {
         Ident* next = current->next;
 
-
+        // Освобождение имени
         if (current->name) {
             free(current->name);
         }
@@ -35,6 +37,9 @@ void cleanup_global_data(Ident* FirstIdent) {
     FirstIdent = NULL;
 }
 
+
+
+// Инициализация переменной
 Ident* create_ident(char *name, Token *value)
 {
     Ident *new_ident = (Ident*)malloc(sizeof(Ident));
@@ -48,7 +53,7 @@ Ident* create_ident(char *name, Token *value)
     return new_ident;
 }
 
-
+// Добавление переменной в начало связного списка
 void add_ident(Ident **first, Ident *new_ident) {
     if (new_ident == nullptr) return;
 
@@ -61,7 +66,7 @@ void add_ident(Ident **first, Ident *new_ident) {
     *first = new_ident;
 }
 
-
+// Удаление переменной из двусвязного списка
 void remove_ident(Ident **first, Ident *ident_to_remove) {
     if (!first || !*first || !ident_to_remove) return;
 
@@ -82,7 +87,7 @@ void remove_ident(Ident **first, Ident *ident_to_remove) {
     free(ident_to_remove);
 }
 
-
+// Линейный поиск переменной по имени
 Ident* find_ident(Ident *first, const char *name) {
     Ident *current = first;
 
@@ -98,7 +103,7 @@ Ident* find_ident(Ident *first, const char *name) {
 
 
 
-
+// Обертки для освобождения памяти конкретных типов данных
 void free_int_container(void *data) {
     if (data) free(data);
 }
@@ -120,6 +125,8 @@ void free_vector_container(void *data) {
 }
 
 
+
+// Реализация вывода для различных типов данных
 void print_int_container(void *data) {
     if (data) {
         IntContainer *ic = (IntContainer*)data;
@@ -130,7 +137,6 @@ void print_int_container(void *data) {
 void print_float_container(void *data) {
     if (data) {
         FloatContainer *fc = (FloatContainer*)data;
-        // Используем умный вывод вместо жесткого %.6f
         print_smart_double(fc->value);
     }
 }
@@ -155,6 +161,8 @@ void print_vector_container(void *data) {
     }
 }
 
+
+// Инициализация int контейнера
 Container* create_int_container(int value) {
     Container *container = (Container*)malloc(sizeof(Container));
     IntContainer *data = (IntContainer*)malloc(sizeof(IntContainer));
@@ -168,6 +176,7 @@ Container* create_int_container(int value) {
     return container;
 }
 
+// Инициализация float контейнера
 Container* create_float_container(double value) {
     Container *container = (Container*)malloc(sizeof(Container));
     FloatContainer *data = (FloatContainer*)malloc(sizeof(FloatContainer));
@@ -181,6 +190,7 @@ Container* create_float_container(double value) {
     return container;
 }
 
+// Инициализация строкового контейнера
 Container* create_string_container(const char *value) {
     Container *container = (Container*)malloc(sizeof(Container));
     StringContainer *data = (StringContainer*)malloc(sizeof(StringContainer));
@@ -195,6 +205,7 @@ Container* create_string_container(const char *value) {
     return container;
 }
 
+// Инициализация векторного контейнера
 Container* create_vector_container(double x, double y, double z) {
     Container *container = (Container*)malloc(sizeof(Container));
     VectorContainer *data = (VectorContainer*)malloc(sizeof(VectorContainer));
@@ -211,6 +222,7 @@ Container* create_vector_container(double x, double y, double z) {
 }
 
 
+// Уничтожение контейнера с использованием его внутренней функции очистки
 void free_container(Container *container) {
     if (container) {
         if (container->free_func && container->data) {
@@ -220,7 +232,7 @@ void free_container(Container *container) {
     }
 }
 
-
+// Вывод содержимого контейнера с использованием его внутренней функции очистки
 void print_container(Container *container) {
     if (container && container->print_func) {
 
@@ -228,7 +240,7 @@ void print_container(Container *container) {
     }
 }
 
-
+// Клонирование контейнера
 Container* container_deep_copy(Container *src) {
     if (!src) return NULL;
 
@@ -254,6 +266,8 @@ Container* container_deep_copy(Container *src) {
     }
 }
 
+
+// Сравнение значений двух контейнеров
 int container_compare(Container *a, Container *b) {
     if (!a || !b) return 0;
     if (a->type != b->type) return 0;
@@ -289,7 +303,7 @@ int container_compare(Container *a, Container *b) {
 
 
 
-
+//Cоздание токена
 Token *create_token(TokenT type, const char *value) {
     Token *token = (Token*)malloc(sizeof(Token));
     token->type = type;
@@ -300,20 +314,8 @@ Token *create_token(TokenT type, const char *value) {
     return token;
 }
 
-/*
 
-Token *create_token(TokenT type, const char *value) {
-    Token *token = (Token*)malloc(sizeof(Token));
-    token->type = type;
-    token->value = strdup(value);
-    token->prev = nullptr;
-    token->next = nullptr;
-    return token;
-}
-*/
-
-
-
+// Создание токена c привязкой контейнера
 Token *create_token_with_container(TokenT type, const char *value, Container *container) {
     Token *token = create_token(type, value);
     if (token) {
@@ -322,7 +324,7 @@ Token *create_token_with_container(TokenT type, const char *value, Container *co
     return token;
 }
 
-
+// Добавление токена в конец списка
 void add_token(Token **head, Token **tail, Token *token) {
     if (token == NULL) return;
 
@@ -336,7 +338,7 @@ void add_token(Token **head, Token **tail, Token *token) {
     }
 }
 
-
+// Очистка токена и его содержимого
 void free_token(Token *token) {
     if (token == NULL) return;
 
@@ -353,7 +355,7 @@ void free_token(Token *token) {
     free(token);
 }
 
-
+// Очистка всего списка токенов
 void free_tokens(Token *head) {
     Token *current = head;
     while (current != NULL) {
@@ -363,7 +365,7 @@ void free_tokens(Token *head) {
     }
 }
 
-
+// Присвоение контейнера токену
 void token_set_container(Token *token, Container *container) {
     if (token == NULL) return;
 
@@ -376,11 +378,7 @@ void token_set_container(Token *token, Container *container) {
 }
 
 
-Container *token_get_container(const Token *token) {
-    return token ? token->container : NULL;
-}
-
-
+// Получение числа из строки и создание токена с соответствующим контейнером
 Token *create_number_token(const char *value) {
     if (value == NULL) return NULL;
 
@@ -400,27 +398,7 @@ Token *create_number_token(const char *value) {
     return token;
 }
 
-
-Token *create_string_token(TokenT type, const char *value) {
-    if (value == NULL) return NULL;
-
-    Token *token = create_token(type, value);
-    if (token) {
-        token->container = create_string_container(value);
-    }
-    return token;
-}
-
-
-Token *create_vector_token(double x, double y, double z) {
-    Token *token = create_token(TOK_VECTOR, NULL);
-    if (token) {
-        token->container = create_vector_container(x, y, z);
-    }
-    return token;
-}
-
-
+//Копия токена с глубоким копированием данных
 Token *copy_token(const Token *src) {
     if (src == NULL) return NULL;
 
@@ -431,26 +409,7 @@ Token *copy_token(const Token *src) {
     return copy;
 }
 
-
-void print_token(const Token *token) {
-    if (token == NULL) {
-        print_log("NULL_TOKEN");
-        return;
-    }
-
-    print_log("Token{type=%d, container=", token->type);
-
-    if (token->container) {
-        print_container(token->container);
-    } else {
-        print_log("NULL");
-    }
-
-    print_log("}\n");
-}
-
-
-
+// Добавление токена на вершину стека
 void push_to_stack(Token** stack_top, Token* item)
 {
     if (stack_top == nullptr || item == nullptr) return;
@@ -465,6 +424,7 @@ void push_to_stack(Token** stack_top, Token* item)
     *stack_top = item;
 }
 
+// Извлечение элемента с вершины стека
 Token* pop_from_stack(Token** stack_top)
 {
     if (stack_top == nullptr || *stack_top == nullptr) {
@@ -484,8 +444,7 @@ Token* pop_from_stack(Token** stack_top)
 }
 
 
-
-
+// Добавление элемента в очередь
 void enqueue(Token** queue_front, Token** queue_rear, Token* item)
 {
     if (item == nullptr) return;
@@ -504,6 +463,7 @@ void enqueue(Token** queue_front, Token** queue_rear, Token* item)
     }
 }
 
+// Извлечение элемента из очереди
 Token* dequeue(Token** queue_front, Token** queue_rear)
 {
     if (queue_front == nullptr || *queue_front == nullptr) {
@@ -526,8 +486,7 @@ Token* dequeue(Token** queue_front, Token** queue_rear)
 
 
 
-
-
+// Приведение числового контейнера к double
 double container_to_double(Container* container) {
     if (!container) return 0.0;
 
@@ -545,7 +504,7 @@ double container_to_double(Container* container) {
     }
 }
 
-
+// Вычисление синуса
 Container* sin_func(Container** args, int arg_count) {
 
     if (!args[0]) return NULL;
@@ -557,6 +516,7 @@ Container* sin_func(Container** args, int arg_count) {
     return NULL;
 }
 
+// Вычисление косинуса
 Container* cos_func(Container** args, int arg_count) {
     if (arg_count != 1) {
         print_log("cos: ожидается 1 аргумент\n");
@@ -572,6 +532,8 @@ Container* cos_func(Container** args, int arg_count) {
     return create_float_container(cos(value));
 }
 
+
+// Натуральный логарифм с проверкой области определения
 Container* log_func(Container** args, int arg_count) {
     if (arg_count != 1) {
         print_log("log: ожидается 1 аргумент\n");
@@ -591,6 +553,8 @@ Container* log_func(Container** args, int arg_count) {
     return create_float_container(log(value));
 }
 
+
+// Возведение в степень
 Container* pow_func(Container** args, int arg_count) {
     if (arg_count != 2) {
         print_log("pow: ожидается 2 аргумента\n");
@@ -613,6 +577,8 @@ Container* pow_func(Container** args, int arg_count) {
     return create_float_container(pow(base, exponent));
 }
 
+
+// Выбор максимального из двух чисел
 Container* max_func(Container* args[], int arg_count) {
     if (arg_count != 2) {
         print_log("max: ожидается 2 аргумента\n");
@@ -630,6 +596,8 @@ Container* max_func(Container* args[], int arg_count) {
     return create_float_container(a > b ? a : b);
 }
 
+
+// Векторное произведение
 Container* cross_func(Container** args, int arg_count) {
     if (arg_count != 2) {
         print_log("cross: ожидается 2 аргумента\n");
@@ -678,6 +646,8 @@ Container* abs_func(Container** args, int arg_count)
     return create_float_container(length);
 }
 
+
+// Операция вычитания
 Container* sub_func(Container** args, int arg_count)
 {
     if (arg_count != 2) {
@@ -710,6 +680,8 @@ Container* sub_func(Container** args, int arg_count)
     return NULL;
 }
 
+
+// Операция сложения
 Container* add_func(Container** args, int arg_count) {
     if (arg_count != 2) {
         print_log("Сложение: ожидается 2 аргумента\n");
@@ -741,7 +713,7 @@ Container* add_func(Container** args, int arg_count) {
     return NULL;
 }
 
-
+// Унарный минус
 Container* neg_func(Container** args, int arg_count) {
     if (arg_count != 1) {
         print_log("Унарный минус: ожидается 1 аргумент\n");
@@ -773,6 +745,8 @@ Container* neg_func(Container** args, int arg_count) {
     }
 }
 
+
+// Деление
 Container* div_func(Container** args, int arg_count) {
     if (arg_count != 2) {
         print_log("Деление: ожидается 2 аргумента\n");
@@ -813,6 +787,8 @@ Container* div_func(Container** args, int arg_count) {
     return NULL;
 }
 
+
+// Универсальное умножение
 Container* mul_func(Container** args, int arg_count) {
     if (arg_count != 2) {
         print_log("Умножение: ожидается 2 аргумента\n");

@@ -19,12 +19,11 @@ void execute_from_file(const char* filename) {
         // Пропускаем пустые строки
         if (strlen(line) == 0) continue;
 
-        // Эхо-печать команды (чтобы видеть, что выполняется)
+        // Печать команды, чтобы видеть, что выполняется
         print_log(">> %s\n", line);
 
-        // === ЗАЩИТА ОТ РЕКУРСИИ И СИСТЕМНЫХ КОМАНД ===
+
         // Мы не разрешаем скрипту вызывать другой скрипт, сохранять файлы или выходить.
-        // Это предотвращает зависание и порчу файлов.
         if (strncmp(line, "open", 4) == 0 ||
             strcmp(line, "save") == 0 ||
             strcmp(line, "screen") == 0 ||
@@ -35,12 +34,9 @@ void execute_from_file(const char* filename) {
             continue;
         }
 
-        // === ВЫПОЛНЕНИЕ ===
+        // выполение команды
         process_expression(line);
 
-        // === ИСТОРИЯ ===
-        // Добавляем успешную команду из файла в общую историю сессии,
-        // чтобы при нажатии 'save' эти команды тоже сохранились.
         char cmd_with_newline[300];
         sprintf(cmd_with_newline, "%s\n", line);
         append_to_file("history.tmp", cmd_with_newline);

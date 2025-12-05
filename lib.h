@@ -9,9 +9,6 @@
 #include <math.h>
 #include <stdarg.h>
 
-/* ========================================================================= */
-/*                          ENUMERATIONS & CONSTANTS                         */
-/* ========================================================================= */
 
 typedef enum {
     TOK_EOF,        // Конец входного потока
@@ -44,19 +41,9 @@ typedef enum {
     CT_STRING
 } ContainerType;
 
-/* ========================================================================= */
-/*                         FORWARD DECLARATIONS                              */
-/* ========================================================================= */
-
 typedef struct Token Token;
 typedef struct Ident Ident;
 typedef struct Container Container;
-
-/* ========================================================================= */
-/*                          DATA STRUCTURES                                  */
-/* ========================================================================= */
-
-// --- Data Containers ---
 
 typedef struct {
     int value;
@@ -84,7 +71,7 @@ struct Container {
     void (*print_func)(void*);
 };
 
-// --- Token System ---
+//Токен
 struct Token {
     TokenT type;
     char *value;            // Строковое представление (для лексера)
@@ -93,7 +80,7 @@ struct Token {
     Token *next;
 };
 
-// --- Symbol Table (Variables) ---
+//Переменная
 struct Ident {
     char *name;
     Token *value;
@@ -101,9 +88,9 @@ struct Ident {
     Ident *next;
 };
 
-// --- Function Registry ---
 
-// Указатель на математическую функцию: принимает массив контейнеров и их кол-во
+
+// Указатель на математическую функцию
 typedef Container* (*MathFunction)(Container* args[], int count);
 
 typedef struct {
@@ -112,9 +99,7 @@ typedef struct {
     MathFunction func;
 } FunctionDef;
 
-/* ========================================================================= */
-/*                        CONTAINER API                                      */
-/* ========================================================================= */
+
 
 // Создание
 Container* create_int_container(int value);
@@ -142,16 +127,11 @@ void print_float_container(void *data);
 void print_string_container(void *data);
 void print_vector_container(void *data);
 
-/* ========================================================================= */
-/*                          TOKEN API                                        */
-/* ========================================================================= */
 
 // Создание токенов
 Token* create_token(TokenT type, const char *value);
 Token* create_token_with_container(TokenT type, const char *value, Container *container);
 Token* create_number_token(const char *value);
-Token* create_string_token(TokenT type, const char *value);
-Token* create_vector_token(double x, double y, double z);
 Token* copy_token(const Token *src);
 
 // Работа со списками токенов
@@ -161,15 +141,13 @@ void free_token(Token *token);
 void free_tokens(Token *head);
 void print_token(const Token *token);
 
-// Структуры данных (Стек и Очередь для Shunting Yard)
+// Работа со стоеком и очередью
 void   push_to_stack(Token** stack_top, Token* item);
 Token* pop_from_stack(Token** stack_top);
 void   enqueue(Token** queue_front, Token** queue_rear, Token* item);
 Token* dequeue(Token** queue_front, Token** queue_rear);
 
-/* ========================================================================= */
-/*                    PARSING & EVALUATION (CORE)                            */
-/* ========================================================================= */
+
 
 // Лексер: превращает строку в список токенов
 Token* lex(const char *input);
@@ -183,19 +161,14 @@ Container* countRPN(Token *head);
 // Главная функция обработки строки
 void process_expression(char* input);
 
-/* ========================================================================= */
-/*                      SYMBOL TABLE (IDENTIFIERS)                           */
-/* ========================================================================= */
 
+// Работа с перменными
 Ident* create_ident(char *name, Token *value);
 void   add_ident(Ident **first, Ident *new_ident);
 void   remove_ident(Ident **first, Ident *ident_to_remove);
 Ident* find_ident(Ident *first, const char *name);
 void   cleanup_global_data(Ident* FirstIdent);
 
-/* ========================================================================= */
-/*                      MATH IMPLEMENTATIONS                                 */
-/* ========================================================================= */
 
 // Арифметика
 Container* add_func(Container** args, int arg_count);
@@ -214,10 +187,6 @@ Container* max_func(Container** args, int arg_count);
 
 // Векторные операции
 Container* cross_func(Container** args, int arg_count);
-
-/* ========================================================================= */
-/*                        UTILS & FILE I/O                                   */
-/* ========================================================================= */
 
 // Логирование
 void print_log(const char* format, ...);
